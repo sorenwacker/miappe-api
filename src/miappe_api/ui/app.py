@@ -301,17 +301,24 @@ class EntityForm:
                                 on_click=make_delete_handler(i),
                             ).props("flat dense color=negative size=sm")
 
-            with ui.row().classes("gap-2 mt-2"):
-                ui.button(
-                    f"Add {entity_type}",
-                    on_click=lambda: self._open_nested_dialog(
-                        entity_type, field_name, refresh_list
-                    ),
-                    icon="add",
-                ).props(f"flat dense color=primary data-testid=btn-add-{entity_type.lower()}")
+            # Inline expandable form for adding nested entities
+            with (
+                ui.expansion(f"Add {entity_type}", icon="add")
+                .classes("w-full mt-2")
+                .props(f"data-testid=expansion-add-{entity_type.lower()}") as expansion
+            ):
 
-                # Navigation link to explore the entity type
-                if self.app is not None:
+                def on_save(instance: Any):
+                    self.nested_items[field_name].append(instance)
+                    refresh_list()
+                    expansion.close()
+
+                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
+                nested_form.render()
+
+            # Navigation link to explore the entity type
+            if self.app is not None:
+                with ui.row().classes("gap-2 mt-2"):
                     ui.button(
                         f"Explore {entity_type}",
                         on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
@@ -343,20 +350,26 @@ class EntityForm:
                     else:
                         ui.label("Not set").classes("text-gray-400 text-sm italic")
 
-            def on_add_item():
-                self._open_nested_dialog(entity_type, field_name, refresh_item, is_single=True)
-
             refresh_item()
 
-            with ui.row().classes("gap-2 mt-2"):
-                ui.button(
-                    f"Set {entity_type}",
-                    on_click=on_add_item,
-                    icon="edit",
-                ).props(f"flat dense color=primary data-testid=btn-set-{entity_type.lower()}")
+            # Inline expandable form for setting the nested entity
+            with (
+                ui.expansion(f"Set {entity_type}", icon="edit")
+                .classes("w-full mt-2")
+                .props(f"data-testid=expansion-set-{entity_type.lower()}") as expansion
+            ):
 
-                # Navigation link to explore the entity type
-                if self.app is not None:
+                def on_save(instance: Any):
+                    self.nested_items[field_name] = instance
+                    refresh_item()
+                    expansion.close()
+
+                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
+                nested_form.render()
+
+            # Navigation link to explore the entity type
+            if self.app is not None:
+                with ui.row().classes("gap-2 mt-2"):
                     ui.button(
                         f"Explore {entity_type}",
                         on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
@@ -381,39 +394,6 @@ class EntityForm:
             if val and isinstance(val, str):
                 return f"{val[:30]}..."
         return "(unnamed)"
-
-    def _open_nested_dialog(
-        self,
-        entity_type: str,
-        field_name: str,
-        refresh_callback: Any,
-        is_single: bool = False,
-    ) -> None:
-        """Open a dialog to create a nested entity."""
-        with ui.dialog() as dialog, ui.card().classes("w-[700px] max-w-[90vw] max-h-[85vh] p-6"):
-            ui.label(f"Add {entity_type}").classes("text-lg font-bold mb-4")
-
-            # Scrollable form content
-            with ui.scroll_area().classes("w-full").style("max-height: calc(85vh - 120px)"):
-
-                def on_save(instance: Any):
-                    if is_single:
-                        self.nested_items[field_name] = instance
-                    else:
-                        self.nested_items[field_name].append(instance)
-                    dialog.close()
-                    refresh_callback()
-
-                # Create nested form
-                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
-                nested_form.render()
-
-            with ui.row().classes("w-full justify-end gap-2 mt-4"):
-                ui.button("Cancel", on_click=dialog.close).props(
-                    f"flat data-testid=btn-cancel-{entity_type.lower()}"
-                )
-
-        dialog.open()
 
     def _clear_nested_item(self, field_name: str, refresh_callback: Any) -> None:
         """Clear a single nested item field."""
@@ -585,13 +565,37 @@ class MIAPPEApp:
         self.entity_tree: list[TreeNode] = []
         self.nodes_by_id: dict[str, TreeNode] = {}
         self.editing_node: TreeNode | None = None
+        # Display density: 'comfortable' (default) or 'compact'
+        self.density: str = "comfortable"
+
+    def _spacing(self) -> dict[str, str | int]:
+        """Get spacing values based on current density setting."""
+        if self.density == "compact":
+            return {
+                "gap": "gap-1",
+                "mb": "mb-1",
+                "p": "p-1",
+                "card_p": "p-1",
+                "text": "text-xs",
+                "indent": 12,
+            }
+        return {
+            "gap": "gap-2",
+            "mb": "mb-2",
+            "p": "p-2",
+            "card_p": "p-2",
+            "text": "text-sm",
+            "indent": 16,
+        }
+
+    def _toggle_density(self) -> None:
+        """Toggle between compact and comfortable display density."""
+        self.density = "compact" if self.density == "comfortable" else "comfortable"
+        # Refresh sidebar to apply new spacing
+        self._refresh_sidebar()
 
     def _build_entity_hierarchy(self) -> list[tuple[str, int]]:
-        """Build entity hierarchy from spec relationships.
-
-        Returns:
-            List of (entity_name, depth) tuples in hierarchical order.
-        """
+        """Build entity hierarchy from spec relationships."""
         if self.facade is None:
             return []
 
@@ -648,12 +652,7 @@ class MIAPPEApp:
         return result
 
     def run(self, host: str = "127.0.0.1", port: int = 8080) -> None:
-        """Run the application.
-
-        Args:
-            host: Host to bind to.
-            port: Port to bind to.
-        """
+        """Run the application."""
         self._setup_ui()
         ui.run(host=host, port=port, title="MIAPPE-API", reload=False)
 
@@ -665,7 +664,16 @@ class MIAPPEApp:
             with ui.header().classes("bg-blue-800 text-white"):
                 ui.label("MIAPPE-API").classes("text-xl font-bold")
                 ui.space()
-                with ui.row().classes("gap-4"):
+                with ui.row().classes("gap-4 items-center"):
+                    # Density toggle button
+                    density_icon = (
+                        "density_small" if self.density == "compact" else "density_medium"
+                    )
+                    ui.button(
+                        icon=density_icon,
+                        on_click=self._toggle_density,
+                    ).props("flat round dark").mark("density-toggle")
+
                     ui.select(
                         self.profiles,
                         value=self.current_profile,
@@ -691,36 +699,38 @@ class MIAPPEApp:
         if self.facade is None:
             self._load_profile(self.current_profile)
 
-        ui.label("Project").classes("text-lg font-bold mb-2")
+        spacing = self._spacing()
+        ui.label("Project").classes(f"text-lg font-bold {spacing['mb']}")
 
         # New entity buttons for root types
         root_types = self._get_root_entity_types()
-        with ui.row().classes("gap-1 mb-4 flex-wrap"):
+        with ui.row().classes(f"{spacing['gap']} mb-4 flex-wrap"):
             for entity_type in root_types[:3]:  # Show top 3 root types
                 ui.button(
                     f"+ {entity_type}",
                     on_click=lambda _, et=entity_type: self._create_new_root_entity(et),
                 ).props(f"dense size=sm data-testid=btn-new-{entity_type.lower()}").classes(
-                    "text-xs"
+                    spacing["text"]
                 )
 
         # Entity tree
         if not self.entity_tree:
-            ui.label("No entities created yet").classes("text-gray-400 text-sm italic")
+            ui.label("No entities created yet").classes(f"text-gray-400 {spacing['text']} italic")
             ui.label("Click a button above to start").classes("text-gray-400 text-xs")
         else:
             self._render_tree_nodes(self.entity_tree, depth=0)
 
     def _render_tree_nodes(self, nodes: list[TreeNode], depth: int) -> None:
         """Render tree nodes recursively."""
+        spacing = self._spacing()
         for node in nodes:
-            indent_px = depth * 16
+            indent_px = depth * spacing["indent"]
             is_selected = self.editing_node and self.editing_node.id == node.id
 
             with (
                 ui.row()
                 .classes(
-                    f"w-full items-center gap-1 p-1 rounded cursor-pointer "
+                    f"w-full items-center {spacing['gap']} {spacing['p']} rounded cursor-pointer "
                     f"{'bg-blue-100' if is_selected else 'hover:bg-gray-200'}"
                 )
                 .style(f"margin-left: {indent_px}px")
@@ -732,7 +742,7 @@ class MIAPPEApp:
                 icon = "folder" if node.children else "description"
                 ui.icon(icon, size="xs").classes("text-gray-500")
                 with ui.column().classes("gap-0 flex-grow"):
-                    ui.label(node.label).classes("text-sm font-medium")
+                    ui.label(node.label).classes(f"{spacing['text']} font-medium")
                     ui.label(node.entity_type).classes("text-xs text-gray-400")
                 # Delete button
                 ui.button(
@@ -937,12 +947,7 @@ class MIAPPEApp:
         ui.navigate.reload()
 
     def _on_entity_select(self, entity_name: str, reset_nav: bool = True) -> None:
-        """Handle entity selection from sidebar or navigation.
-
-        Args:
-            entity_name: Name of entity to display.
-            reset_nav: If True, reset nav stack (sidebar click). If False, push to stack.
-        """
+        """Handle entity selection from sidebar or navigation."""
         if reset_nav:
             self.nav_stack = [entity_name]
         else:
@@ -993,11 +998,5 @@ class MIAPPEApp:
 
 
 def run_ui(host: str = "127.0.0.1", port: int = 8080) -> None:
-    """Run the MIAPPE-API web interface.
-
-    Args:
-        host: Host to bind to.
-        port: Port to bind to.
-    """
-    app = MIAPPEApp()
-    app.run(host=host, port=port)
+    """Run the MIAPPE-API web interface."""
+    MIAPPEApp().run(host=host, port=port)

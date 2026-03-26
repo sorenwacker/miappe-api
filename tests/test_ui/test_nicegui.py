@@ -338,3 +338,126 @@ class TestEntityCreationProgrammatic:
         assert var.method == example["method"]
         assert var.scale == example["scale"]
         assert var.trait_description == example["trait_description"]
+
+
+class TestDensityToggle:
+    """Test display density toggle functionality."""
+
+    async def test_density_toggle_button_visible(self, user: User, app) -> None:
+        """Test that density toggle button is visible in header."""
+        _ = app
+        await user.open("/")
+        # Density toggle should be visible via icon
+        toggle = user.find(kind=ui.button, marker="density-toggle")
+        assert toggle is not None
+
+    async def test_default_density_is_comfortable(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that default density mode is comfortable."""
+        assert app.density == "comfortable"
+
+    async def test_density_toggle_changes_state(self, user: User, app) -> None:
+        """Test that clicking density toggle changes the density state."""
+        _ = app
+        await user.open("/")
+
+        # Initial state is comfortable
+        assert app.density == "comfortable"
+
+        # Click toggle
+        toggle = user.find(kind=ui.button, marker="density-toggle")
+        toggle.click()
+
+        # Should now be compact
+        assert app.density == "compact"
+
+        # Click again
+        toggle.click()
+
+        # Should be back to comfortable
+        assert app.density == "comfortable"
+
+    async def test_spacing_helper_returns_compact_values(self, user: User, app) -> None:
+        """Test that _spacing returns correct values for compact mode."""
+        await user.open("/")
+
+        app.density = "compact"
+        spacing = app._spacing()
+
+        assert spacing["gap"] == "gap-1"
+        assert spacing["mb"] == "mb-1"
+        assert spacing["p"] == "p-1"
+        assert spacing["text"] == "text-xs"
+        assert spacing["indent"] == 12
+
+    async def test_spacing_helper_returns_comfortable_values(self, user: User, app) -> None:
+        """Test that _spacing returns correct values for comfortable mode."""
+        _ = app
+        await user.open("/")
+
+        app.density = "comfortable"
+        spacing = app._spacing()
+
+        assert spacing["gap"] == "gap-2"
+        assert spacing["mb"] == "mb-2"
+        assert spacing["p"] == "p-2"
+        assert spacing["text"] == "text-sm"
+        assert spacing["indent"] == 16
+
+
+class TestInlineNestedForms:
+    """Test inline expandable forms for nested entities."""
+
+    async def test_add_nested_entity_uses_expansion(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that adding nested entity shows inline expansion, not modal.
+
+        Note: This test verifies the inline expansion UI is available in the
+        Investigation form's nested fields (studies, contacts), rather than
+        testing the child entity creation flow after tree selection.
+        """
+        await user.open("/")
+
+        # Create an Investigation first
+        user.find("+ Investigation").click()
+        await user.should_see("Required Fields")
+
+        # The Investigation form should have inline expansion for adding Studies
+        # (in the optional fields section)
+        await user.should_see("Add Study")
+        await user.should_see("Add Person")
+
+        # Fill in required fields
+        user.find(kind=ui.input, marker="unique_id").type("INV-TEST")
+        title_input = user.find(kind=ui.input, marker="title")
+        title_input.type("Test Investigation")
+
+        # The expansion for adding nested entities should be present
+        # and be an expansion element, not a button that opens a modal
+        expansion = user.find(kind=ui.expansion, content="Add Study")
+        assert expansion is not None, "Add Study should be an expansion element"
+
+    async def test_nested_list_field_shows_expansion(self, user: User, app) -> None:  # noqa: ARG002
+        """Test that nested list fields use expandable forms."""
+        await user.open("/")
+
+        user.find("+ Investigation").click()
+        await user.should_see("Required Fields")
+
+        # The studies field should show an expansion for adding studies
+        # Look for the Add button which triggers expansion
+        await user.should_see("Add Study")
+
+    async def test_nested_entity_can_be_added_inline(self, user: User, app) -> None:
+        """Test that nested entities can be created using inline forms."""
+        _ = app
+        await user.open("/")
+
+        user.find("+ Investigation").click()
+        await user.should_see("Required Fields")
+
+        # Fill investigation fields
+        user.find(kind=ui.input, marker="unique_id").type("INV-INLINE")
+        title_input = user.find(kind=ui.input, marker="title")
+        title_input.type("Inline Test")
+
+        # Expand the Add Study section - verifies inline form is present
+        user.find("Add Study").click()

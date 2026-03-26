@@ -230,6 +230,23 @@ Open http://127.0.0.1:8080 in your browser to:
 - Add nested entities (Studies, Samples, etc.) to parent objects
 - Validate data interactively
 
+### Display Density
+
+The interface supports two display density modes:
+
+- **Comfortable** (default): Standard spacing for readability
+- **Compact**: Reduced spacing to show more content on screen
+
+Toggle between modes using the density button in the header (density icon).
+
+### Inline Nested Forms
+
+When adding nested entities (e.g., Studies within an Investigation), forms appear inline within expandable sections rather than modal dialogs. This allows you to:
+
+- See the parent form while filling in nested data
+- Collapse completed sections to reduce visual clutter
+- Work with multiple nested entities without losing context
+
 ## Next Steps
 
 - Read the [Architecture Overview](../architecture/overview.md) to understand the system design
