@@ -23,6 +23,7 @@ class EntityForm:
         entity_name: str,
         on_save: Any = None,
         is_nested: bool = False,
+        app: Any = None,
     ) -> None:
         """Initialize form for an entity.
 
@@ -31,6 +32,7 @@ class EntityForm:
             entity_name: Name of entity to create form for.
             on_save: Callback when entity is saved (for nested forms).
             is_nested: Whether this is a nested form (in dialog).
+            app: Reference to MIAPPEApp for navigation.
         """
         self.facade = facade
         self.entity_name = entity_name
@@ -40,6 +42,7 @@ class EntityForm:
         self.result_container: ui.element | None = None
         self.on_save = on_save
         self.is_nested = is_nested
+        self.app = app
 
     def render(self) -> None:
         """Render the form UI."""
@@ -104,14 +107,11 @@ class EntityForm:
                 self.inputs[field_name] = ui.checkbox(label)
 
             elif field_type == "date":
-                with ui.input(label=label).classes("w-full") as date_input:
-                    with ui.menu().props("no-parent-event") as menu:
-                        with ui.date().bind_value(date_input):
-                            with ui.row().classes("justify-end"):
-                                ui.button("Close", on_click=menu.close).props("flat")
-                    with date_input.add_slot("append"):
-                        ui.icon("edit_calendar").on("click", menu.open).classes("cursor-pointer")
-                self.inputs[field_name] = date_input
+                # Simple date input without complex bindings
+                self.inputs[field_name] = ui.input(
+                    label=label,
+                    placeholder="YYYY-MM-DD",
+                ).classes("w-full")
 
             elif field_type == "uri":
                 self.inputs[field_name] = ui.input(
@@ -150,36 +150,46 @@ class EntityForm:
 
             # Container for added items
             items_container = ui.column().classes("w-full gap-1 mt-2")
+            count_label = ui.label(f"0 {entity_type}(s)").classes("text-xs text-gray-500")
 
-            def refresh_items():
+            def refresh_list():
                 items_container.clear()
+                items = self.nested_items[field_name]
+                count_label.set_text(f"{len(items)} {entity_type}(s)")
                 with items_container:
-                    for i, item in enumerate(self.nested_items[field_name]):
+                    for i, item in enumerate(items):
                         with ui.row().classes("w-full items-center gap-2 p-1 bg-white rounded"):
-                            # Show summary of the item
                             summary = self._get_entity_summary(item)
                             ui.label(summary).classes("flex-grow text-sm")
+
+                            def make_delete_handler(idx: int):
+                                def handler():
+                                    del self.nested_items[field_name][idx]
+                                    refresh_list()
+
+                                return handler
+
                             ui.button(
                                 icon="delete",
-                                on_click=lambda _, idx=i: self._remove_nested_item(
-                                    field_name, idx, refresh_items
-                                ),
+                                on_click=make_delete_handler(i),
                             ).props("flat dense color=negative size=sm")
 
-            def on_add_item():
-                self._open_nested_dialog(entity_type, field_name, refresh_items)
-
-            with ui.row().classes("w-full justify-between items-center mt-2"):
-                ui.label(f"0 {entity_type}(s)").bind_text_from(
-                    self.nested_items,
-                    field_name,
-                    lambda items: f"{len(items)} {entity_type}(s)",
-                )
+            with ui.row().classes("gap-2 mt-2"):
                 ui.button(
                     f"Add {entity_type}",
-                    on_click=on_add_item,
+                    on_click=lambda: self._open_nested_dialog(
+                        entity_type, field_name, refresh_list
+                    ),
                     icon="add",
                 ).props("flat dense color=primary")
+
+                # Navigation link to explore the entity type
+                if self.app is not None:
+                    ui.button(
+                        f"Explore {entity_type}",
+                        on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
+                        icon="arrow_forward",
+                    ).props("flat dense")
 
     def _render_nested_entity_field(self, field_name: str, entity_type: str, label: str) -> None:
         """Render a field that contains a single nested entity."""
@@ -211,11 +221,20 @@ class EntityForm:
 
             refresh_item()
 
-            ui.button(
-                f"Set {entity_type}",
-                on_click=on_add_item,
-                icon="edit",
-            ).props("flat dense color=primary").classes("mt-2")
+            with ui.row().classes("gap-2 mt-2"):
+                ui.button(
+                    f"Set {entity_type}",
+                    on_click=on_add_item,
+                    icon="edit",
+                ).props("flat dense color=primary")
+
+                # Navigation link to explore the entity type
+                if self.app is not None:
+                    ui.button(
+                        f"Explore {entity_type}",
+                        on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
+                        icon="arrow_forward",
+                    ).props("flat dense")
 
     def _get_entity_summary(self, entity: Any) -> str:
         """Get a short summary string for an entity."""
@@ -263,11 +282,6 @@ class EntityForm:
                 ui.button("Cancel", on_click=dialog.close).props("flat")
 
         dialog.open()
-
-    def _remove_nested_item(self, field_name: str, index: int, refresh_callback: Any) -> None:
-        """Remove a nested item from a list field."""
-        del self.nested_items[field_name][index]
-        refresh_callback()
 
     def _clear_nested_item(self, field_name: str, refresh_callback: Any) -> None:
         """Clear a single nested item field."""
@@ -400,6 +414,8 @@ class MIAPPEApp:
         self.current_entity: str | None = None
         self.facade: ProfileFacade | None = None
         self.main_content: ui.element | None = None
+        self.breadcrumb_container: ui.element | None = None
+        self.nav_stack: list[str] = []  # Stack of entity names for breadcrumbs
 
     def _build_entity_hierarchy(self) -> list[tuple[str, int]]:
         """Build entity hierarchy from spec relationships.
@@ -491,9 +507,13 @@ class MIAPPEApp:
                 drawer.props("width=280")
                 self._render_sidebar()
 
-            with ui.column().classes("w-full p-4") as main:
-                self.main_content = main
-                self._render_welcome()
+            with ui.column().classes("w-full p-4"):
+                # Breadcrumb container at top
+                self.breadcrumb_container = ui.row().classes("w-full mb-4 gap-2 items-center")
+                # Main content below
+                with ui.column().classes("w-full") as main:
+                    self.main_content = main
+                    self._render_welcome()
 
     def _render_sidebar(self) -> None:
         """Render the entity list sidebar in hierarchical order."""
@@ -538,14 +558,60 @@ class MIAPPEApp:
         self._load_profile(profile)
         ui.navigate.reload()
 
-    def _on_entity_select(self, entity_name: str) -> None:
-        """Handle entity selection."""
+    def _on_entity_select(self, entity_name: str, reset_nav: bool = True) -> None:
+        """Handle entity selection from sidebar or navigation.
+
+        Args:
+            entity_name: Name of entity to display.
+            reset_nav: If True, reset nav stack (sidebar click). If False, push to stack.
+        """
+        if reset_nav:
+            self.nav_stack = [entity_name]
+        else:
+            self.nav_stack.append(entity_name)
+
         self.current_entity = entity_name
+        self._render_breadcrumbs()
         self.main_content.clear()
 
         with self.main_content:
-            form = EntityForm(self.facade, entity_name)
+            form = EntityForm(self.facade, entity_name, app=self)
             form.render()
+
+    def _render_breadcrumbs(self) -> None:
+        """Render breadcrumb navigation."""
+        self.breadcrumb_container.clear()
+        with self.breadcrumb_container:
+            for i, entity_name in enumerate(self.nav_stack):
+                if i > 0:
+                    ui.label("/").classes("text-gray-400")
+
+                is_current = i == len(self.nav_stack) - 1
+                if is_current:
+                    ui.label(entity_name).classes("font-bold text-blue-800")
+                else:
+                    # Clickable breadcrumb to navigate back
+                    ui.button(
+                        entity_name,
+                        on_click=lambda _, idx=i: self._navigate_to_breadcrumb(idx),
+                    ).props("flat dense").classes("text-blue-600")
+
+    def _navigate_to_breadcrumb(self, index: int) -> None:
+        """Navigate to a breadcrumb position."""
+        # Truncate nav_stack to the clicked position
+        self.nav_stack = self.nav_stack[: index + 1]
+        entity_name = self.nav_stack[-1]
+        self.current_entity = entity_name
+        self._render_breadcrumbs()
+        self.main_content.clear()
+
+        with self.main_content:
+            form = EntityForm(self.facade, entity_name, app=self)
+            form.render()
+
+    def navigate_to_entity(self, entity_name: str) -> None:
+        """Navigate into a nested entity (drill-down)."""
+        self._on_entity_select(entity_name, reset_nav=False)
 
 
 def run_ui(host: str = "127.0.0.1", port: int = 8080) -> None:
