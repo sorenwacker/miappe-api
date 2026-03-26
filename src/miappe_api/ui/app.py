@@ -905,16 +905,14 @@ class MIAPPEApp:
             if nested:
                 ui.separator().classes("my-4")
                 ui.label("Add Child Entities").classes("text-lg font-semibold mb-2")
-                # Deduplicate child types (e.g., ISA Study has 3 OntologyAnnotation fields)
-                unique_child_types = sorted(set(nested.values()))
                 with ui.row().classes("gap-2 flex-wrap"):
-                    for child_type in unique_child_types:
+                    for field_name, child_type in nested.items():
                         ui.button(
-                            f"+ {child_type}",
+                            f"+ {field_name}",
                             on_click=lambda _,
                             ct=child_type,
                             nid=node.id: self._create_child_entity(ct, nid),
-                        ).props(f"outline data-testid=btn-add-child-{child_type.lower()}")
+                        ).props(f"outline data-testid=btn-add-child-{field_name.lower()}")
 
     def _create_child_entity(self, entity_type: str, parent_id: str) -> None:
         """Create a child entity under a parent."""
