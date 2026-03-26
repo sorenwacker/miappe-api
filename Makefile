@@ -1,4 +1,4 @@
-.PHONY: install dev test lint format docs docs-serve clean help
+.PHONY: install dev test lint format docs docs-serve ui clean help
 
 help:
 	@echo "Available targets:"
@@ -10,6 +10,7 @@ help:
 	@echo "  format     - Format code"
 	@echo "  docs       - Build documentation"
 	@echo "  docs-serve - Serve documentation locally"
+	@echo "  ui         - Launch web interface"
 	@echo "  clean      - Remove build artifacts"
 
 install:
@@ -37,6 +38,9 @@ docs:
 
 docs-serve:
 	uv run mkdocs serve
+
+ui:
+	uv run miappe ui
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov site build dist *.egg-info
