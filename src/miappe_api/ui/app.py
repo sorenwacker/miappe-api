@@ -263,20 +263,23 @@ class EntityForm:
         is_single: bool = False,
     ) -> None:
         """Open a dialog to create a nested entity."""
-        with ui.dialog() as dialog, ui.card().classes("w-96"):
-            ui.label(f"Add {entity_type}").classes("text-lg font-bold")
+        with ui.dialog() as dialog, ui.card().classes("w-[700px] max-w-[90vw] max-h-[85vh] p-6"):
+            ui.label(f"Add {entity_type}").classes("text-lg font-bold mb-4")
 
-            def on_save(instance: Any):
-                if is_single:
-                    self.nested_items[field_name] = instance
-                else:
-                    self.nested_items[field_name].append(instance)
-                dialog.close()
-                refresh_callback()
+            # Scrollable form content
+            with ui.scroll_area().classes("w-full").style("max-height: calc(85vh - 120px)"):
 
-            # Create nested form
-            nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
-            nested_form.render()
+                def on_save(instance: Any):
+                    if is_single:
+                        self.nested_items[field_name] = instance
+                    else:
+                        self.nested_items[field_name].append(instance)
+                    dialog.close()
+                    refresh_callback()
+
+                # Create nested form
+                nested_form = EntityForm(self.facade, entity_type, on_save=on_save, is_nested=True)
+                nested_form.render()
 
             with ui.row().classes("w-full justify-end gap-2 mt-4"):
                 ui.button("Cancel", on_click=dialog.close).props("flat")
