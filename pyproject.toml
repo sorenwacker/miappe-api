@@ -18,6 +18,7 @@ classifiers = [
 
 dependencies = [
     "pydantic>=2.0",
+    "pydantic-settings>=2.0",
     "fastapi>=0.110",
     "typer>=0.12",
     "uvicorn>=0.29",
