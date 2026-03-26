@@ -13,24 +13,78 @@ uv run miappe --help
 
 ## Commands
 
-!!! note "Under Development"
-    CLI commands are being implemented. This page will be updated as commands become available.
+### version
 
-### Planned Commands
+Show the package version:
 
 ```bash
-# Validate a metadata file
-miappe validate <file>
-
-# Convert between formats
-miappe convert <input> <output>
-
-# Generate empty template
-miappe template <entity-type> --version 1.1
-
-# Start REST API server
-miappe serve
+miappe version
 ```
+
+### entities
+
+List available MIAPPE entities for a version:
+
+```bash
+miappe entities --version 1.1
+```
+
+### validate
+
+Validate a MIAPPE metadata file:
+
+```bash
+miappe validate <file> --entity investigation --version 1.1
+```
+
+### template
+
+Generate an empty template for an entity:
+
+```bash
+miappe template investigation --output my_investigation.yaml --format yaml
+```
+
+Options:
+
+| Option | Description |
+|--------|-------------|
+| `--output`, `-o` | Output file path (prints to stdout if not specified) |
+| `--format`, `-f` | Output format: `yaml` (default) or `json` |
+| `--version`, `-v` | MIAPPE version (default: 1.1) |
+
+### convert
+
+Convert between YAML and JSON formats:
+
+```bash
+miappe convert input.yaml output.json --entity investigation
+```
+
+The format is determined by file extension (`.yaml`, `.yml`, or `.json`).
+
+### ui
+
+Launch the NiceGUI web interface:
+
+```bash
+miappe ui --host 127.0.0.1 --port 8080
+```
+
+Options:
+
+| Option | Description |
+|--------|-------------|
+| `--host`, `-h` | Host to bind to (default: 127.0.0.1) |
+| `--port`, `-p` | Port to bind to (default: 8080) |
+
+The web interface provides:
+
+- Visual entity browser organized by hierarchy
+- Dynamic forms generated from YAML specifications
+- Nested entity creation (e.g., add Studies to an Investigation)
+- Validation feedback
+- Support for both MIAPPE and ISA profiles
 
 ## Global Options
 

@@ -146,6 +146,52 @@ Response:
 
 ## Python Usage
 
+### Interactive Facade (Recommended)
+
+The facade pattern provides a fluent API for working with MIAPPE and ISA entities:
+
+```python
+from miappe_api import miappe, isa
+
+# Create a MIAPPE facade
+m = miappe()
+
+# List available entities
+m.entities
+# ['Investigation', 'Study', 'BiologicalMaterial', ...]
+
+# Get help on an entity's fields
+m.Investigation.help()
+
+# Create an Investigation
+inv = m.Investigation(
+    unique_id="INV001",
+    title="Drought tolerance study"
+)
+
+# Add nested entities
+study = m.Study(unique_id="STU001", title="Field trial")
+inv.studies.append(study)
+```
+
+For ISA entities:
+
+```python
+i = isa()
+
+# Explore the ISA material flow chain
+i.entities
+# ['Investigation', 'Study', 'Source', 'Sample', 'Extract', 'LabeledExtract', ...]
+
+# Create entities with derives_from relationships
+source = i.Source(unique_id="SRC001", name="Patient 1")
+sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source])
+```
+
+### Direct Model Access
+
+For lower-level control, use `get_model`:
+
 ```python
 from miappe_api.models import get_model
 from miappe_api.validators import validate
@@ -168,6 +214,21 @@ errors = validate(data, "investigation", version="1.1")
 if not errors:
     print("Validation passed!")
 ```
+
+## Web Interface
+
+Launch the visual metadata editor:
+
+```bash
+miappe ui
+```
+
+Open http://127.0.0.1:8080 in your browser to:
+
+- Browse entities organized by hierarchy
+- Create entities with dynamically generated forms
+- Add nested entities (Studies, Samples, etc.) to parent objects
+- Validate data interactively
 
 ## Next Steps
 

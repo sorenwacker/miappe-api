@@ -7,9 +7,9 @@ MIAPPE-API follows a schema-driven architecture where YAML specifications define
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        Interfaces                           │
-│  ┌─────────────────────┐    ┌─────────────────────────────┐ │
-│  │    CLI (Typer)      │    │    REST API (FastAPI)       │ │
-│  └─────────────────────┘    └─────────────────────────────┘ │
+│  ┌───────────┐  ┌───────────┐  ┌─────────────────────────┐ │
+│  │CLI (Typer)│  │Web (Nice) │  │    REST API (FastAPI)   │ │
+│  └───────────┘  └───────────┘  └─────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -18,6 +18,9 @@ MIAPPE-API follows a schema-driven architecture where YAML specifications define
 │  ┌─────────────────────┐    ┌─────────────────────────────┐ │
 │  │    Model Factory    │    │      Validators             │ │
 │  └─────────────────────┘    └─────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                   ProfileFacade                         ││
+│  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -58,9 +61,18 @@ Persistence layer abstraction supporting multiple backends:
 - File-based storage (JSON, YAML)
 - Database backends (future)
 
+### ProfileFacade
+
+A fluent API layer providing intuitive access to entity helpers:
+
+- **Entity Discovery**: `facade.entities` lists available entity types
+- **Entity Helpers**: `facade.Investigation` provides field info and creation
+- **Profile Support**: Separate facades for MIAPPE and ISA profiles via `miappe()` and `isa()` functions
+
 ### Interfaces
 
 - **CLI**: Command-line interface for batch operations and scripting
+- **Web UI**: NiceGUI-based visual editor with dynamic forms
 - **REST API**: HTTP endpoints for integration with other systems
 
 ## Design Principles
