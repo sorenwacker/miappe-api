@@ -233,8 +233,8 @@ class TestSpecExamples:
 class TestEntityCreationProgrammatic:
     """Test creating entities programmatically using spec examples."""
 
-    def test_create_all_entities_from_examples(self) -> None:
-        """Test that all entities can be created with their example data."""
+    def test_create_all_entities_required_fields_only(self) -> None:
+        """Test creating all entities with only required fields from examples."""
         for entity_name in PROFILE.entities:
             helper = getattr(PROFILE, entity_name)
             example = helper.example_data
@@ -247,22 +247,94 @@ class TestEntityCreationProgrammatic:
                 instance = helper.create(**required_data)
                 assert instance is not None, f"Failed to create {entity_name}"
 
-    def test_investigation_validates_with_example(self) -> None:
-        """Test Investigation creation with full example data."""
+                # Verify required fields are set
+                for field_name in helper.required_fields:
+                    if field_name in required_data:
+                        assert (
+                            getattr(instance, field_name) == required_data[field_name]
+                        ), f"{entity_name}.{field_name} not set correctly"
+
+    def test_create_all_entities_all_fields(self) -> None:
+        """Test creating all entities with all fields (required + optional) from examples."""
+        for entity_name in PROFILE.entities:
+            helper = getattr(PROFILE, entity_name)
+            example = helper.example_data
+            nested = set(helper.nested_fields.keys())
+
+            if example:
+                # Use all fields from example except nested entity fields
+                all_data = {k: v for k, v in example.items() if k not in nested}
+
+                # Should not raise validation error
+                instance = helper.create(**all_data)
+                assert instance is not None, f"Failed to create {entity_name}"
+
+                # Verify all fields are set
+                for field_name, value in all_data.items():
+                    actual = getattr(instance, field_name)
+                    # Handle type conversions (URL, datetime, date)
+                    actual_str = str(actual)
+                    value_str = str(value)
+                    # Datetime may have time component added
+                    if value_str in actual_str or actual_str.startswith(value_str):
+                        continue
+                    assert (
+                        actual_str == value_str
+                    ), f"{entity_name}.{field_name}: expected {value}, got {actual}"
+
+    def test_investigation_all_fields(self) -> None:
+        """Test Investigation creation with all fields from example."""
         example = PROFILE.Investigation.example_data
-        inv = PROFILE.Investigation.create(
-            unique_id=example["unique_id"],
-            title=example["title"],
-        )
+        nested = set(PROFILE.Investigation.nested_fields.keys())
+        data = {k: v for k, v in example.items() if k not in nested}
+
+        inv = PROFILE.Investigation.create(**data)
+
         assert inv.unique_id == example["unique_id"]
         assert inv.title == example["title"]
+        assert inv.description == example["description"]
+        assert inv.miappe_version == example["miappe_version"]
+        assert str(inv.license) == example["license"]  # URL type comparison
 
-    def test_study_validates_with_example(self) -> None:
-        """Test Study creation with full example data."""
+    def test_study_all_fields(self) -> None:
+        """Test Study creation with all fields from example."""
         example = PROFILE.Study.example_data
-        study = PROFILE.Study.create(
-            unique_id=example["unique_id"],
-            title=example["title"],
-        )
+        nested = set(PROFILE.Study.nested_fields.keys())
+        data = {k: v for k, v in example.items() if k not in nested}
+
+        study = PROFILE.Study.create(**data)
+
         assert study.unique_id == example["unique_id"]
         assert study.title == example["title"]
+        assert study.latitude == example["latitude"]
+        assert study.longitude == example["longitude"]
+        assert study.growth_facility_type == example["growth_facility_type"]
+
+    def test_biological_material_all_fields(self) -> None:
+        """Test BiologicalMaterial creation with all fields from example."""
+        example = PROFILE.BiologicalMaterial.example_data
+        nested = set(PROFILE.BiologicalMaterial.nested_fields.keys())
+        data = {k: v for k, v in example.items() if k not in nested}
+
+        bm = PROFILE.BiologicalMaterial.create(**data)
+
+        assert bm.unique_id == example["unique_id"]
+        assert bm.organism == example["organism"]
+        assert bm.genus == example["genus"]
+        assert bm.species == example["species"]
+        assert bm.biological_material_latitude == example["biological_material_latitude"]
+
+    def test_observed_variable_all_fields(self) -> None:
+        """Test ObservedVariable creation with all fields from example."""
+        example = PROFILE.ObservedVariable.example_data
+        nested = set(PROFILE.ObservedVariable.nested_fields.keys())
+        data = {k: v for k, v in example.items() if k not in nested}
+
+        var = PROFILE.ObservedVariable.create(**data)
+
+        assert var.unique_id == example["unique_id"]
+        assert var.name == example["name"]
+        assert var.trait == example["trait"]
+        assert var.method == example["method"]
+        assert var.scale == example["scale"]
+        assert var.trait_description == example["trait_description"]

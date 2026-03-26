@@ -35,10 +35,14 @@ entities:
     example:
       unique_id: INV-DROUGHT-2024
       title: Drought Tolerance in European Wheat Cultivars
-      description: Multi-year field study assessing drought response across 50 wheat varieties
+      description: Multi-year field study assessing drought response across 50 wheat varieties under controlled water deficit conditions
       submission_date: "2024-03-15"
+      public_release_date: "2024-06-01"
       license: https://creativecommons.org/licenses/by/4.0/
       miappe_version: "1.1"
+      associated_publications:
+        - https://doi.org/10.1234/example.2024.001
+        - https://doi.org/10.1234/example.2024.002
     fields:
       - name: unique_id
         type: string
@@ -119,15 +123,24 @@ entities:
     example:
       unique_id: STU-FIELD-2024
       title: Field Trial Summer 2024
-      description: Randomized complete block design with 3 replicates
+      description: Randomized complete block design with 3 replicates testing 50 wheat cultivars
       start_date: "2024-05-01"
       end_date: "2024-09-30"
-      contact_institution: Wageningen University
+      contact_institution: Wageningen University and Research
       experimental_site_name: Wageningen Campus Field Station
       latitude: 51.9851
       longitude: 5.6631
+      altitude: 15.0
       growth_facility_type: field
       experimental_design_type: RCBD
+      experimental_design_description: Randomized complete block design with 3 blocks, 50 genotypes per block
+      observation_unit_level_hierarchy:
+        - block
+        - plot
+        - plant
+      observation_unit_description: Individual plots of 2x3 meters containing 6 rows of wheat
+      cultural_practices: Standard fertilization at 150 kg N/ha, no irrigation after flowering stage
+      map_of_experimental_design: https://example.org/study/STU-FIELD-2024/design.pdf
     fields:
       - name: unique_id
         type: string
@@ -365,7 +378,15 @@ entities:
       species: aestivum
       infraspecific_name: cv. Apache
       accession_number: PI-123456
-      biological_material_description: Winter wheat cultivar adapted to European conditions
+      biological_material_description: Winter wheat cultivar adapted to European conditions with moderate drought tolerance
+      biological_material_latitude: 48.8566
+      biological_material_longitude: 2.3522
+      biological_material_altitude: 35.0
+      biological_material_coordinates_uncertainty: 100m
+      biological_material_preprocessing: Seeds vernalized at 4C for 8 weeks
+      external_references:
+        - GRIN:PI123456
+        - EBI:12345
     fields:
       - name: unique_id
         type: string
@@ -471,10 +492,16 @@ entities:
       observation_unit_type: plot
       biological_material_id: BM-WHEAT-001
       spatial_distribution_type: grid
+      spatial_distribution: Block A, Row 1, Column 1
       observation_unit_x_ref: "1"
       observation_unit_y_ref: "1"
-      observation_unit_block: "A"
+      observation_unit_block: A
       observation_unit_replicate: "1"
+      entry_type: test
+      observation_level: plot
+      observation_level_code: A-1-1
+      external_references:
+        - BrAPI:OU123456
     fields:
       - name: unique_id
         type: string
@@ -581,9 +608,15 @@ entities:
       name: Plant Height
       trait: plant height
       trait_accession_number: CO_321:0000020
+      trait_description: The height of the plant from soil surface to the tip of the main stem
       method: Ruler measurement from soil to highest point
+      method_accession_number: CO_321:0000025
+      method_description: Manual measurement using a graduated ruler
       scale: cm
+      scale_accession_number: UO:0000015
       scale_description: Continuous numeric scale in centimeters
+      time_scale: days after sowing
+      reference: https://cropontology.org/term/CO_321:0000020
     fields:
       - name: unique_id
         type: string
@@ -676,7 +709,7 @@ entities:
     example:
       unique_id: FAC-IRRIGATION
       name: Irrigation Treatment
-      description: Water stress treatment levels
+      description: Water stress treatment levels applied during reproductive growth stage
       factor_type: treatment
     fields:
       - name: unique_id
@@ -724,7 +757,7 @@ entities:
       unique_id: FV-DROUGHT
       factor_id: FAC-IRRIGATION
       value: Drought stress
-      description: 50% reduction in irrigation from flowering stage
+      description: 50% reduction in irrigation from flowering stage until harvest
     fields:
       - name: unique_id
         type: string
@@ -763,7 +796,12 @@ entities:
       unique_id: EVT-SOWING-001
       event_type: Sowing
       date: "2024-05-01"
-      description: Seeds sown at 300 seeds per square meter
+      end_date: "2024-05-03"
+      description: Seeds sown at 300 seeds per square meter using mechanical drill seeder
+      observation_unit_ids:
+        - OU-PLOT-001
+        - OU-PLOT-002
+      event_accession_number: CO_715:0000007
     fields:
       - name: unique_id
         type: string
@@ -824,7 +862,8 @@ entities:
       parameter_accession_number: ENVO:09200001
       value: "22.5"
       unit: degrees Celsius
-      description: Average daily temperature during flowering
+      date: "2024-07-15"
+      description: Average daily temperature during flowering period measured at 2m height
     fields:
       - name: unique_id
         type: string
@@ -882,9 +921,12 @@ entities:
       unique_id: SAM-LEAF-001
       observation_unit_id: OU-PLOT-001
       plant_structural_development_stage: flowering
-      plant_anatomical_entity: leaf
+      plant_anatomical_entity: flag leaf
       collection_date: "2024-07-15"
-      description: Flag leaf sample for RNA extraction
+      description: Flag leaf sample collected for RNA extraction and transcriptome analysis
+      external_references:
+        - BioSamples:SAMEA123456
+        - ENA:ERS123456
     fields:
       - name: unique_id
         type: string
@@ -940,7 +982,7 @@ entities:
       unique_id: DF-PHENOTYPES-001
       name: phenotype_measurements.csv
       link: https://doi.org/10.5281/zenodo.1234567
-      description: Raw phenotype measurements for all plots
+      description: Raw phenotype measurements for all plots including plant height, flowering time, and yield
       version: "1.0"
       file_type: text/csv
     fields:
@@ -999,6 +1041,8 @@ entities:
       latitude: 51.9851
       longitude: 5.6631
       altitude: 15.0
+      description: Experimental field station with clay soil, temperate maritime climate
+      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
       location_type: field
     fields:
       - name: unique_id
@@ -1090,9 +1134,12 @@ entities:
     example:
       unique_id: SRC-CGNGENEBANK
       name: Centre for Genetic Resources Netherlands
-      description: Dutch national genebank for plant genetic resources
+      description: Dutch national genebank for plant genetic resources, part of WUR
       institute_code: NLD037
       country: Netherlands
+      address: Droevendaalsesteeg 1, 6708 PB Wageningen, Netherlands
+      latitude: 51.9851
+      longitude: 5.6631
     fields:
       - name: unique_id
         type: string
