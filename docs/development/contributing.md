@@ -11,16 +11,10 @@ Guidelines for contributing to MIAPPE-API.
     cd miappe-api
     ```
 
-2. Install dependencies:
+2. Install dependencies and pre-commit hooks:
 
     ```bash
-    uv sync --extra dev --extra docs
-    ```
-
-3. Install pre-commit hooks:
-
-    ```bash
-    uv run pre-commit install
+    make dev
     ```
 
 ## Development Workflow
@@ -29,10 +23,10 @@ Guidelines for contributing to MIAPPE-API.
 
 ```bash
 # Run all tests
-uv run pytest
+make test
 
 # Run with coverage
-uv run pytest --cov
+make test-cov
 
 # Run specific test file
 uv run pytest tests/test_version.py
@@ -47,20 +41,20 @@ Pre-commit hooks run automatically on commit. To run manually:
 uv run pre-commit run --all-files
 
 # Run ruff linter only
-uv run ruff check src tests
+make lint
 
-# Run ruff formatter
-uv run ruff format src tests
+# Format code
+make format
 ```
 
 ### Documentation
 
 ```bash
 # Serve docs locally
-uv run mkdocs serve
+make docs-serve
 
 # Build docs
-uv run mkdocs build
+make docs
 ```
 
 ## Code Style

@@ -30,18 +30,23 @@ uv sync --extra dev --extra docs
 ## Development
 
 ```bash
+# Setup development environment
+make dev
+
 # Run tests
-uv run pytest
+make test
 
 # Run linter
-uv run ruff check src tests
+make lint
 
 # Format code
-uv run ruff format src tests
+make format
 
 # Serve documentation locally
-uv run mkdocs serve
+make docs-serve
 ```
+
+Run `make help` to see all available targets.
 
 ## Architecture
 

@@ -13,15 +13,15 @@ git clone <repository-url>
 cd miappe-api
 
 # Install with UV
-uv sync
+make install
 ```
 
 ## Development Installation
 
-For development, install with extra dependencies:
+For development, install with extra dependencies and pre-commit hooks:
 
 ```bash
-uv sync --extra dev --extra docs
+make dev
 ```
 
 This includes:
@@ -36,5 +36,5 @@ This includes:
 uv run miappe --version
 
 # Run the test suite
-uv run pytest
+make test
 ```
