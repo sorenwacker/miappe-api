@@ -255,7 +255,7 @@ class EntityForm:
     def _render_nested_list_field(
         self,
         field_name: str,
-        entity_type: str,  # noqa: ARG002
+        entity_type: str,
         label: str,
     ) -> None:
         """Render a field that contains a list of nested entities as an Excel-like grid."""
@@ -265,6 +265,9 @@ class EntityForm:
             existing = getattr(self.instance, field_name, None) or []
         self.nested_items[field_name] = list(existing)
 
+        # Get entity helper to know the fields
+        entity_helper = getattr(self.facade, entity_type, None)
+
         with ui.card().classes("w-full p-2 bg-gray-50"):
             with ui.row().classes("w-full items-center"):
                 ui.label(label).classes("font-semibold text-sm flex-grow")
@@ -272,9 +275,26 @@ class EntityForm:
 
             # Grid container
             grid_container = ui.column().classes("w-full mt-2")
+            grid_ref = {"grid": None}
+
+            def get_columns() -> list[str]:
+                """Get column names from entity helper or existing data."""
+                if entity_helper:
+                    # Use required + optional fields (exclude nested entities)
+                    cols = list(entity_helper.required_fields) + list(entity_helper.optional_fields)
+                    nested = set(entity_helper.nested_fields.keys())
+                    return [c for c in cols if c not in nested][:8]  # Max 8 columns
+                elif self.nested_items[field_name]:
+                    item = self.nested_items[field_name][0]
+                    if hasattr(item, "model_dump"):
+                        return list(item.model_dump().keys())[:8]
+                    elif isinstance(item, dict):
+                        return list(item.keys())[:8]
+                return ["value"]
 
             def get_grid_data() -> list[dict]:
                 """Convert items to grid rows."""
+                cols = get_columns()
                 rows = []
                 for i, item in enumerate(self.nested_items[field_name]):
                     if hasattr(item, "model_dump"):
@@ -283,6 +303,10 @@ class EntityForm:
                         data = item.copy()
                     else:
                         data = {"value": str(item)}
+                    # Ensure all columns exist
+                    for c in cols:
+                        if c not in data:
+                            data[c] = ""
                     # Flatten nested objects to strings for display
                     for k, v in list(data.items()):
                         if isinstance(v, list | dict):
@@ -291,21 +315,43 @@ class EntityForm:
                     rows.append(data)
                 return rows
 
+            def add_row():
+                """Add a new empty row."""
+                cols = get_columns()
+                new_item = {c: "" for c in cols}
+                self.nested_items[field_name].append(new_item)
+                refresh_grid()
+
+            def delete_selected():
+                """Delete selected row."""
+                if grid_ref["grid"]:
+
+                    async def do_delete():
+                        rows = await grid_ref["grid"].get_selected_rows()
+                        if rows:
+                            idx = rows[0].get("_idx")
+                            if idx is not None and idx < len(self.nested_items[field_name]):
+                                del self.nested_items[field_name][idx]
+                                refresh_grid()
+
+                    ui.timer(0.1, do_delete, once=True)
+
             def refresh_grid():
                 grid_container.clear()
                 items = self.nested_items[field_name]
                 count_label.set_text(f"{len(items)} item{'s' if len(items) != 1 else ''}")
 
-                if not items:
-                    with grid_container:
-                        ui.label("No items").classes("text-gray-400 text-sm italic")
-                    return
-
-                rows = get_grid_data()
-                # Get columns from first item (exclude internal _idx)
-                cols = [k for k in rows[0] if not k.startswith("_")]
+                cols = get_columns()
+                rows = get_grid_data() if items else []
 
                 with grid_container:
+                    # Action buttons
+                    with ui.row().classes("gap-2 mb-2"):
+                        ui.button("+ Add Row", on_click=add_row, icon="add").props("dense size=sm")
+                        ui.button("Delete Selected", on_click=delete_selected, icon="delete").props(
+                            "dense size=sm color=negative"
+                        )
+
                     column_defs = [
                         {
                             "field": c,
@@ -318,7 +364,7 @@ class EntityForm:
                         for c in cols
                     ]
 
-                    grid = (
+                    grid_ref["grid"] = (
                         ui.aggrid(
                             {
                                 "columnDefs": column_defs,
@@ -337,7 +383,7 @@ class EntityForm:
                             }
                         )
                         .classes("w-full")
-                        .style("height: auto; min-height: 150px; max-height: 400px;")
+                        .style("height: auto; min-height: 200px; max-height: 400px;")
                     )
 
                     async def on_cell_changed(e):
@@ -345,13 +391,14 @@ class EntityForm:
                         row_idx = e.args["data"]["_idx"]
                         col = e.args["colId"]
                         new_value = e.args["value"]
-                        item = self.nested_items[field_name][row_idx]
-                        if hasattr(item, "__setattr__"):
-                            setattr(item, col, new_value)
-                        elif isinstance(item, dict):
-                            item[col] = new_value
+                        if row_idx < len(self.nested_items[field_name]):
+                            item = self.nested_items[field_name][row_idx]
+                            if hasattr(item, "__setattr__"):
+                                setattr(item, col, new_value)
+                            elif isinstance(item, dict):
+                                item[col] = new_value
 
-                    grid.on("cellValueChanged", on_cell_changed)
+                    grid_ref["grid"].on("cellValueChanged", on_cell_changed)
 
             refresh_grid()
 
