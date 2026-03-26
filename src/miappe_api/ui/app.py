@@ -5,6 +5,7 @@ Provides a web interface for creating and validating MIAPPE/ISA entities.
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -51,7 +52,7 @@ class TreeNode:
 
 
 class EntityForm:
-    """Dynamic form for creating entities."""
+    """Dynamic form for creating and editing entities."""
 
     def __init__(
         self,
@@ -60,6 +61,7 @@ class EntityForm:
         on_save: Any = None,
         is_nested: bool = False,
         app: Any = None,
+        instance: Any = None,
     ) -> None:
         """Initialize form for an entity.
 
@@ -69,6 +71,7 @@ class EntityForm:
             on_save: Callback when entity is saved (for nested forms).
             is_nested: Whether this is a nested form (in dialog).
             app: Reference to MIAPPEApp for navigation.
+            instance: Existing instance to edit (None for new entity).
         """
         self.facade = facade
         self.entity_name = entity_name
@@ -79,10 +82,13 @@ class EntityForm:
         self.on_save = on_save
         self.is_nested = is_nested
         self.app = app
+        self.instance = instance  # Existing instance for editing
+        self.is_edit_mode = instance is not None
 
     def render(self) -> None:
         """Render the form UI."""
-        ui.label(self.entity_name).classes("text-2xl font-bold mb-2")
+        mode_label = "Edit" if self.is_edit_mode else "New"
+        ui.label(f"{mode_label} {self.entity_name}").classes("text-2xl font-bold mb-2")
         ui.label(self.helper.description).classes("text-gray-600 mb-4")
 
         if self.helper.ontology_term:
@@ -106,6 +112,14 @@ class EntityForm:
                 ui.button("Save", on_click=self._on_save_nested, icon="save").props(
                     f"color=primary data-testid=btn-save-{self.entity_name.lower()}"
                 )
+            elif self.is_edit_mode:
+                # Edit mode - Update button
+                ui.button("Update", on_click=self._on_update, icon="save").props(
+                    f"color=primary data-testid=btn-update-{self.entity_name.lower()}"
+                )
+                ui.button("Cancel", on_click=self._on_cancel_edit, icon="close").props(
+                    f"flat data-testid=btn-cancel-{self.entity_name.lower()}"
+                )
             else:
                 # Top-level form - Create button
                 ui.button("Create", on_click=self._on_create, icon="add").props(
@@ -117,6 +131,16 @@ class EntityForm:
 
                 # Result container (only for top-level forms)
                 self.result_container = ui.column().classes("w-full mt-4")
+
+    def _get_existing_value(self, field_name: str) -> Any:
+        """Get existing value from instance for pre-filling edit form."""
+        if not self.instance:
+            return None
+        value = getattr(self.instance, field_name, None)
+        if value is None:
+            return None
+        # Convert to string for display in inputs
+        return str(value) if value is not None else None
 
     def _render_field(self, field_name: str, required: bool) -> None:
         """Render a single form field."""
@@ -130,12 +154,16 @@ class EntityForm:
         # Create test ID for this field
         testid = f"input-{field_name.replace('_', '-')}"
 
+        # Get existing value for edit mode
+        existing_value = self._get_existing_value(field_name)
+
         with ui.column().classes("w-full mb-2"):
             if field_type == "string":
                 self.inputs[field_name] = (
                     ui.input(
                         label=label,
                         placeholder=description[:50] if description else None,
+                        value=existing_value or "",
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
@@ -143,10 +171,15 @@ class EntityForm:
                 )
 
             elif field_type == "integer":
+                int_value = None
+                if existing_value:
+                    with contextlib.suppress(ValueError, TypeError):
+                        int_value = int(existing_value)
                 self.inputs[field_name] = (
                     ui.number(
                         label=label,
                         format="%.0f",
+                        value=int_value,
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
@@ -154,9 +187,14 @@ class EntityForm:
                 )
 
             elif field_type == "float":
+                float_value = None
+                if existing_value:
+                    with contextlib.suppress(ValueError, TypeError):
+                        float_value = float(existing_value)
                 self.inputs[field_name] = (
                     ui.number(
                         label=label,
+                        value=float_value,
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
@@ -164,8 +202,13 @@ class EntityForm:
                 )
 
             elif field_type == "boolean":
+                bool_value = False
+                if self.instance:
+                    bool_value = bool(getattr(self.instance, field_name, False))
                 self.inputs[field_name] = (
-                    ui.checkbox(label).props(f"data-testid={testid}").mark(field_name)
+                    ui.checkbox(label, value=bool_value)
+                    .props(f"data-testid={testid}")
+                    .mark(field_name)
                 )
 
             elif field_type == "date":
@@ -174,6 +217,7 @@ class EntityForm:
                     ui.input(
                         label=label,
                         placeholder="YYYY-MM-DD",
+                        value=existing_value or "",
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
@@ -185,6 +229,7 @@ class EntityForm:
                     ui.input(
                         label=label,
                         placeholder="https://...",
+                        value=existing_value or "",
                     )
                     .classes("w-full")
                     .props(f"data-testid={testid}")
@@ -493,6 +538,34 @@ class EntityForm:
         if self.result_container:
             self.result_container.clear()
 
+    async def _on_update(self) -> None:
+        """Handle update button click for editing existing entities."""
+        values = self._collect_values()
+
+        try:
+            # Create new instance with updated values
+            updated_instance = self.helper.create(**values)
+
+            # Call on_save callback to update the tree
+            if self.on_save:
+                self.on_save(updated_instance)
+
+            ui.notify(f"Updated {self.entity_name}", type="positive")
+
+        except ValidationError as e:
+            error_msg = "; ".join(
+                f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in e.errors()
+            )
+            ui.notify(f"Validation error: {error_msg}", type="negative")
+
+        except Exception as e:
+            ui.notify(f"Error: {e}", type="negative")
+
+    def _on_cancel_edit(self) -> None:
+        """Handle cancel button click during editing."""
+        if self.app:
+            self.app._render_welcome()
+
 
 class MIAPPEApp:
     """Main application class."""
@@ -658,9 +731,16 @@ class MIAPPEApp:
                 # Icon based on entity type
                 icon = "folder" if node.children else "description"
                 ui.icon(icon, size="xs").classes("text-gray-500")
-                with ui.column().classes("gap-0"):
+                with ui.column().classes("gap-0 flex-grow"):
                     ui.label(node.label).classes("text-sm font-medium")
                     ui.label(node.entity_type).classes("text-xs text-gray-400")
+                # Delete button
+                ui.button(
+                    icon="delete",
+                    on_click=lambda _, n=node: self._confirm_delete_node(n),
+                ).props(f"flat dense size=xs color=negative data-testid=btn-delete-{node.id}").on(
+                    "click.stop", lambda: None
+                )  # Prevent row click
 
             # Render children
             if node.children:
@@ -723,6 +803,52 @@ class MIAPPEApp:
         self._refresh_sidebar()
         ui.notify(f"Created {entity_type}: {node.label}", type="positive")
 
+    def _confirm_delete_node(self, node: TreeNode) -> None:
+        """Show confirmation dialog before deleting a node."""
+        with ui.dialog() as dialog, ui.card():
+            ui.label(f"Delete {node.entity_type}?").classes("text-lg font-bold")
+            ui.label(f'"{node.label}"').classes("text-gray-600")
+            if node.children:
+                ui.label(f"This will also delete {len(node.children)} child entities.").classes(
+                    "text-red-600 text-sm"
+                )
+
+            with ui.row().classes("w-full justify-end gap-2 mt-4"):
+                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button(
+                    "Delete",
+                    on_click=lambda: self._delete_node(node, dialog),
+                ).props("color=negative")
+
+        dialog.open()
+
+    def _delete_node(self, node: TreeNode, dialog: Any) -> None:
+        """Delete a node from the tree."""
+        dialog.close()
+
+        # Remove from parent's children or from root list
+        if node.parent_id and node.parent_id in self.nodes_by_id:
+            parent = self.nodes_by_id[node.parent_id]
+            parent.children = [c for c in parent.children if c.id != node.id]
+        else:
+            self.entity_tree = [n for n in self.entity_tree if n.id != node.id]
+
+        # Remove node and all children from nodes_by_id
+        def remove_recursively(n: TreeNode) -> None:
+            for child in n.children:
+                remove_recursively(child)
+            self.nodes_by_id.pop(n.id, None)
+
+        remove_recursively(node)
+
+        # Clear editing if we deleted the edited node
+        if self.editing_node and self.editing_node.id == node.id:
+            self.editing_node = None
+            self._render_welcome()
+
+        self._refresh_sidebar()
+        ui.notify(f"Deleted {node.entity_type}: {node.label}", type="warning")
+
     def _refresh_sidebar(self) -> None:
         """Refresh the sidebar tree view."""
         if self.sidebar_container:
@@ -738,25 +864,36 @@ class MIAPPEApp:
         self._refresh_sidebar()
         self.main_content.clear()
 
+        def on_update(updated_instance: Any) -> None:
+            """Handle entity update."""
+            node.instance = updated_instance
+            # Update label from new instance
+            if hasattr(updated_instance, "model_dump"):
+                data = updated_instance.model_dump()
+                for key in ["title", "name", "unique_id", "identifier", "filename"]:
+                    if key in data and data[key]:
+                        node.label = str(data[key])
+                        break
+            self._refresh_sidebar()
+            self._on_tree_node_click(node)  # Refresh edit view
+
         with self.main_content:
-            # Show entity details with edit capability
-            ui.label(f"Editing: {node.label}").classes("text-2xl font-bold mb-2")
-            ui.label(node.entity_type).classes("text-gray-600 mb-4")
+            # Editable form pre-filled with current data
+            form = EntityForm(
+                self.facade,
+                node.entity_type,
+                app=self,
+                instance=node.instance,
+                on_save=on_update,
+            )
+            form.render()
 
-            # Show current data
-            with ui.expansion("Current Data", icon="data_object").classes("w-full mb-4"):
-                yaml_str = yaml.dump(
-                    node.instance.model_dump(exclude_none=True),
-                    default_flow_style=False,
-                    allow_unicode=True,
-                )
-                ui.code(yaml_str, language="yaml").classes("w-full")
-
-            # Show nested entity options
+            # Show nested entity options below form
             helper = getattr(self.facade, node.entity_type)
             nested = helper.nested_fields
 
             if nested:
+                ui.separator().classes("my-4")
                 ui.label("Add Child Entities").classes("text-lg font-semibold mb-2")
                 with ui.row().classes("gap-2 flex-wrap"):
                     for _field_name, child_type in nested.items():
