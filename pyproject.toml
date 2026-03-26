@@ -92,3 +92,9 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
 ]
+
+[dependency-groups]
+dev = [
+    "selenium>=4.41.0",
+    "webdriver-manager>=4.0.2",
+]

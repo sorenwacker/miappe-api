@@ -103,11 +103,17 @@ class EntityForm:
         with ui.row().classes("gap-4 mt-4"):
             if self.is_nested:
                 # Nested form - Save button calls callback
-                ui.button("Save", on_click=self._on_save_nested, icon="save").props("color=primary")
+                ui.button("Save", on_click=self._on_save_nested, icon="save").props(
+                    f"color=primary data-testid=btn-save-{self.entity_name.lower()}"
+                )
             else:
                 # Top-level form - Create button
-                ui.button("Create", on_click=self._on_create, icon="add").props("color=primary")
-                ui.button("Clear", on_click=self._on_clear, icon="clear").props("flat")
+                ui.button("Create", on_click=self._on_create, icon="add").props(
+                    f"color=primary data-testid=btn-create-{self.entity_name.lower()}"
+                )
+                ui.button("Clear", on_click=self._on_clear, icon="clear").props(
+                    f"flat data-testid=btn-clear-{self.entity_name.lower()}"
+                )
 
                 # Result container (only for top-level forms)
                 self.result_container = ui.column().classes("w-full mt-4")
@@ -121,39 +127,62 @@ class EntityForm:
 
         label = f"{field_name} *" if required else field_name
 
+        # Create test ID for this field
+        testid = f"input-{field_name.replace('_', '-')}"
+
         with ui.column().classes("w-full mb-2"):
             if field_type == "string":
-                self.inputs[field_name] = ui.input(
-                    label=label,
-                    placeholder=description[:50] if description else None,
-                ).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.input(
+                        label=label,
+                        placeholder=description[:50] if description else None,
+                    )
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                )
 
             elif field_type == "integer":
-                self.inputs[field_name] = ui.number(
-                    label=label,
-                    format="%.0f",
-                ).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.number(
+                        label=label,
+                        format="%.0f",
+                    )
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                )
 
             elif field_type == "float":
-                self.inputs[field_name] = ui.number(
-                    label=label,
-                ).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.number(
+                        label=label,
+                    )
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                )
 
             elif field_type == "boolean":
-                self.inputs[field_name] = ui.checkbox(label)
+                self.inputs[field_name] = ui.checkbox(label).props(f"data-testid={testid}")
 
             elif field_type == "date":
                 # Simple date input without complex bindings
-                self.inputs[field_name] = ui.input(
-                    label=label,
-                    placeholder="YYYY-MM-DD",
-                ).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.input(
+                        label=label,
+                        placeholder="YYYY-MM-DD",
+                    )
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                )
 
             elif field_type == "uri":
-                self.inputs[field_name] = ui.input(
-                    label=label,
-                    placeholder="https://...",
-                ).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.input(
+                        label=label,
+                        placeholder="https://...",
+                    )
+                    .classes("w-full")
+                    .props(f"data-testid={testid}")
+                )
 
             elif field_type == "list":
                 if items and items not in ("string", "int", "float", "bool"):
@@ -161,10 +190,14 @@ class EntityForm:
                     self._render_nested_list_field(field_name, items, label)
                 else:
                     # List of primitives - use textarea
-                    self.inputs[field_name] = ui.textarea(
-                        label=label,
-                        placeholder=f"One {items or 'item'} per line",
-                    ).classes("w-full")
+                    self.inputs[field_name] = (
+                        ui.textarea(
+                            label=label,
+                            placeholder=f"One {items or 'item'} per line",
+                        )
+                        .classes("w-full")
+                        .props(f"data-testid={testid}")
+                    )
 
             elif field_type == "entity":
                 # Single entity reference - show add button
@@ -172,7 +205,9 @@ class EntityForm:
 
             else:
                 # Fallback to text input
-                self.inputs[field_name] = ui.input(label=label).classes("w-full")
+                self.inputs[field_name] = (
+                    ui.input(label=label).classes("w-full").props(f"data-testid={testid}")
+                )
 
             if description:
                 ui.label(description).classes("text-xs text-gray-500 mt-1")
@@ -217,7 +252,7 @@ class EntityForm:
                         entity_type, field_name, refresh_list
                     ),
                     icon="add",
-                ).props("flat dense color=primary")
+                ).props(f"flat dense color=primary data-testid=btn-add-{entity_type.lower()}")
 
                 # Navigation link to explore the entity type
                 if self.app is not None:
@@ -225,7 +260,7 @@ class EntityForm:
                         f"Explore {entity_type}",
                         on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
                         icon="arrow_forward",
-                    ).props("flat dense")
+                    ).props(f"flat dense data-testid=btn-explore-{entity_type.lower()}")
 
     def _render_nested_entity_field(self, field_name: str, entity_type: str, label: str) -> None:
         """Render a field that contains a single nested entity."""
@@ -262,7 +297,7 @@ class EntityForm:
                     f"Set {entity_type}",
                     on_click=on_add_item,
                     icon="edit",
-                ).props("flat dense color=primary")
+                ).props(f"flat dense color=primary data-testid=btn-set-{entity_type.lower()}")
 
                 # Navigation link to explore the entity type
                 if self.app is not None:
@@ -270,7 +305,7 @@ class EntityForm:
                         f"Explore {entity_type}",
                         on_click=lambda et=entity_type: self.app.navigate_to_entity(et),
                         icon="arrow_forward",
-                    ).props("flat dense")
+                    ).props(f"flat dense data-testid=btn-explore-{entity_type.lower()}")
 
     def _get_entity_summary(self, entity: Any) -> str:
         """Get a short summary string for an entity."""
@@ -318,7 +353,9 @@ class EntityForm:
                 nested_form.render()
 
             with ui.row().classes("w-full justify-end gap-2 mt-4"):
-                ui.button("Cancel", on_click=dialog.close).props("flat")
+                ui.button("Cancel", on_click=dialog.close).props(
+                    f"flat data-testid=btn-cancel-{entity_type.lower()}"
+                )
 
         dialog.open()
 
@@ -549,7 +586,7 @@ class MIAPPEApp:
                         self.profiles,
                         value=self.current_profile,
                         on_change=lambda e: self._on_profile_change(e.value),
-                    ).props("dense dark").classes("w-32")
+                    ).props("dense dark data-testid=select-profile").classes("w-32")
 
             with ui.left_drawer().classes("bg-gray-100") as drawer:
                 drawer.props("width=300")
@@ -579,7 +616,9 @@ class MIAPPEApp:
                 ui.button(
                     f"+ {entity_type}",
                     on_click=lambda _, et=entity_type: self._create_new_root_entity(et),
-                ).props("dense size=sm").classes("text-xs")
+                ).props(f"dense size=sm data-testid=btn-new-{entity_type.lower()}").classes(
+                    "text-xs"
+                )
 
         # Entity tree
         if not self.entity_tree:
@@ -601,6 +640,7 @@ class MIAPPEApp:
                     f"{'bg-blue-100' if is_selected else 'hover:bg-gray-200'}"
                 )
                 .style(f"margin-left: {indent_px}px")
+                .props(f"data-testid=tree-node-{node.id}")
                 .on("click", lambda _, n=node: self._on_tree_node_click(n))
             ):
                 # Icon based on entity type
@@ -713,7 +753,7 @@ class MIAPPEApp:
                             on_click=lambda _,
                             ct=child_type,
                             nid=node.id: self._create_child_entity(ct, nid),
-                        ).props("outline")
+                        ).props(f"outline data-testid=btn-add-child-{child_type.lower()}")
 
     def _create_child_entity(self, entity_type: str, parent_id: str) -> None:
         """Create a child entity under a parent."""
