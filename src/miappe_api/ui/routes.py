@@ -230,6 +230,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             ) from e
 
         state.editing_node_id = None
+        state.current_nested_items = {}  # Reset nested items for new entity
 
         fields = _get_field_data(helper)
 
@@ -266,11 +267,22 @@ def create_app(state: AppState | None = None) -> FastAPI:
             ) from e
 
         state.editing_node_id = node_id
+        state.current_nested_items = {}  # Reset nested items
 
         fields = _get_field_data(helper)
         values = {}
         if node.instance and hasattr(node.instance, "model_dump"):
             values = node.instance.model_dump(exclude_none=True)
+
+            # Load nested items into current_nested_items for table editing
+            for field_name in helper.nested_fields:
+                if field_name in values and values[field_name]:
+                    items = values[field_name]
+                    if isinstance(items, list):
+                        state.current_nested_items[field_name] = [
+                            item.model_dump() if hasattr(item, "model_dump") else item
+                            for item in items
+                        ]
 
         return templates.TemplateResponse(
             request,
@@ -306,9 +318,25 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         values = _collect_form_values(form_data, helper)
 
+        # Merge nested items from table editing
+        for field_name, items in state.current_nested_items.items():
+            if field_name in helper.nested_fields and items:
+                # Clean up internal _idx field from items
+                cleaned_items = []
+                for item in items:
+                    if isinstance(item, dict):
+                        cleaned = {k: v for k, v in item.items() if not k.startswith("_")}
+                        if any(cleaned.values()):  # Only include non-empty items
+                            cleaned_items.append(cleaned)
+                if cleaned_items:
+                    values[field_name] = cleaned_items
+
         try:
             instance = helper.create(**values)
             node = state.add_node(entity_type, instance)
+
+            # Clear nested items after successful save
+            state.current_nested_items = {}
 
             response = templates.TemplateResponse(
                 request,
@@ -345,9 +373,24 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         values = _collect_form_values(form_data, helper)
 
+        # Merge nested items from table editing
+        for field_name, items in state.current_nested_items.items():
+            if field_name in helper.nested_fields and items:
+                cleaned_items = []
+                for item in items:
+                    if isinstance(item, dict):
+                        cleaned = {k: v for k, v in item.items() if not k.startswith("_")}
+                        if any(cleaned.values()):
+                            cleaned_items.append(cleaned)
+                if cleaned_items:
+                    values[field_name] = cleaned_items
+
         try:
             instance = helper.create(**values)
             state.update_node(node_id, instance)
+
+            # Clear nested items after successful save
+            state.current_nested_items = {}
 
             response = templates.TemplateResponse(
                 request,
