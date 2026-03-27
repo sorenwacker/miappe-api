@@ -188,16 +188,16 @@ entities:
         ontology_term: isaterms:release_date
 
       - name: start_date
-        type: date
+        type: datetime
         required: false
-        description: Study start date.
-        ontology_term: PPEO:hasStartDate
+        description: Study start date/time.
+        ontology_term: PPEO:hasStartDateTime
 
       - name: end_date
-        type: date
+        type: datetime
         required: false
-        description: Study end date.
-        ontology_term: PPEO:hasEndDate
+        description: Study end date/time.
+        ontology_term: PPEO:hasEndDateTime
 
       - name: contact_institution
         type: string
@@ -210,7 +210,7 @@ entities:
         type: string
         required: false
         description: Name of the experimental site.
-        ontology_term: PPEO:hasGrowthFacility
+        ontology_term: PPEO:hasName
 
       - name: latitude
         type: float
@@ -252,7 +252,7 @@ entities:
         type: string
         required: false
         description: Type of growth facility (field, greenhouse, growth chamber).
-        ontology_term: PPEO:hasGrowthFacility
+        ontology_term: PPEO:hasType
 
       - name: cultural_practices
         type: string
@@ -544,7 +544,7 @@ entities:
         type: string
         required: false
         description: Type (treatment, genotype, environment) - MIAPPE style.
-        ontology_term: PPEO:hasFactorType
+        ontology_term: PPEO:hasType
 
       - name: factor_type_ontology
         type: entity
@@ -657,7 +657,7 @@ entities:
         type: string
         required: false
         description: MIME type or format.
-        ontology_term: PPEO:hasFileType
+        ontology_term: PPEO:hasType
 
   # ============================================================================
   # ISA EXTENSIONS - Assay workflows, protocols, sample processing
@@ -1045,7 +1045,6 @@ entities:
         type: string
         required: false
         description: Scientific name (genus and species).
-        ontology_term: PPEO:hasOrganism
 
       - name: genus
         type: string
@@ -1236,7 +1235,7 @@ entities:
         type: string
         required: false
         description: Trait ontology accession (Crop Ontology).
-        ontology_term: PPEO:hasTraitAccession
+        ontology_term: PPEO:hasExternalIdentifier
 
       - name: trait_description
         type: string
@@ -1297,7 +1296,7 @@ entities:
         type: string
         required: true
         description: Type of event (sowing, harvest, irrigation).
-        ontology_term: PPEO:hasEventType
+        ontology_term: PPEO:hasType
 
       - name: date
         type: datetime
@@ -1365,7 +1364,6 @@ entities:
         type: string
         required: false
         description: Unit of measurement.
-        ontology_term: PPEO:hasUnit
 
       - name: date
         type: datetime
