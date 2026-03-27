@@ -21,8 +21,13 @@ ontology: combined
 validation_rules:
   - name: date_order
     description: End date must not be before start date
-    applies_to: [Study, Event, Assay]
+    applies_to: [Study, Assay]
     condition: end_date >= start_date
+
+  - name: event_date_order
+    description: Event end date must not be before event date
+    applies_to: [Event]
+    condition: end_date >= date
 
   - name: identifier_pattern
     description: Identifiers must be alphanumeric with underscores/hyphens

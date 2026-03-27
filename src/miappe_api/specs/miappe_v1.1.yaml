@@ -14,8 +14,13 @@ ontology: PPEO
 validation_rules:
   - name: date_range
     description: End date must not be before start date
-    applies_to: [Study, Event]
+    applies_to: [Study]
     condition: end_date >= start_date
+
+  - name: event_date_range
+    description: Event end date must not be before event date
+    applies_to: [Event]
+    condition: end_date >= date
 
   - name: unique_id_pattern
     description: Unique IDs must contain only alphanumeric characters, underscores, and hyphens

@@ -82,8 +82,11 @@ def create_engine_for_entity(entity: str, version: str = "1.1") -> ValidationEng
             break
 
     # Add date range rules for common date pairs
-    date_fields = {f.name for f in spec.fields if f.type.value == "date"}
+    date_fields = {f.name for f in spec.fields if f.type.value in ("date", "datetime")}
     if "start_date" in date_fields and "end_date" in date_fields:
         engine.add_rule(DateRangeRule(start_field="start_date", end_field="end_date"))
+    elif "date" in date_fields and "end_date" in date_fields:
+        # Event uses 'date' instead of 'start_date'
+        engine.add_rule(DateRangeRule(start_field="date", end_field="end_date"))
 
     return engine
