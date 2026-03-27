@@ -154,6 +154,176 @@ def get_element_text(driver, testid: str) -> str:
     return element.text
 
 
+def fill_all_study_fields(driver, row_idx: int = 0):
+    """Fill all Study fields from YAML example in a table row.
+
+    Args:
+        driver: Selenium WebDriver
+        row_idx: Row index for cell naming (default 0)
+    """
+    prefix = f"cell-{row_idx}-"
+
+    # Required fields
+    fill_field(driver, f"{prefix}unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
+    fill_field(driver, f"{prefix}title", STUDY_EXAMPLE["title"], trigger_change=True)
+
+    # All optional fields from YAML example
+    fill_field(driver, f"{prefix}description", STUDY_EXAMPLE["description"], trigger_change=True)
+    fill_field(driver, f"{prefix}start_date", STUDY_EXAMPLE["start_date"], trigger_change=True)
+    fill_field(driver, f"{prefix}end_date", STUDY_EXAMPLE["end_date"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}contact_institution",
+        STUDY_EXAMPLE["contact_institution"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}experimental_site_name",
+        STUDY_EXAMPLE["experimental_site_name"],
+        trigger_change=True,
+    )
+    fill_field(driver, f"{prefix}latitude", str(STUDY_EXAMPLE["latitude"]), trigger_change=True)
+    fill_field(driver, f"{prefix}longitude", str(STUDY_EXAMPLE["longitude"]), trigger_change=True)
+    fill_field(driver, f"{prefix}altitude", str(STUDY_EXAMPLE["altitude"]), trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}growth_facility_type",
+        STUDY_EXAMPLE["growth_facility_type"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}experimental_design_type",
+        STUDY_EXAMPLE["experimental_design_type"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}experimental_design_description",
+        STUDY_EXAMPLE["experimental_design_description"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}observation_unit_description",
+        STUDY_EXAMPLE["observation_unit_description"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}cultural_practices",
+        STUDY_EXAMPLE["cultural_practices"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}map_of_experimental_design",
+        STUDY_EXAMPLE["map_of_experimental_design"],
+        trigger_change=True,
+    )
+
+    # List field: observation_unit_level_hierarchy (one per line in textarea)
+    hierarchy = STUDY_EXAMPLE.get("observation_unit_level_hierarchy", [])
+    if hierarchy:
+        fill_field(
+            driver,
+            f"{prefix}observation_unit_level_hierarchy",
+            "\n".join(hierarchy),
+            trigger_change=True,
+        )
+
+
+def fill_all_person_fields(driver, row_idx: int = 0):
+    """Fill all Person fields from YAML example in a table row.
+
+    Args:
+        driver: Selenium WebDriver
+        row_idx: Row index for cell naming (default 0)
+    """
+    prefix = f"cell-{row_idx}-"
+
+    # Required field
+    fill_field(driver, f"{prefix}name", PERSON_EXAMPLE["name"], trigger_change=True)
+
+    # All optional fields from YAML example
+    fill_field(driver, f"{prefix}email", PERSON_EXAMPLE["email"], trigger_change=True)
+    fill_field(driver, f"{prefix}institution", PERSON_EXAMPLE["institution"], trigger_change=True)
+    fill_field(driver, f"{prefix}role", PERSON_EXAMPLE["role"], trigger_change=True)
+    fill_field(driver, f"{prefix}orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
+
+
+def fill_all_biological_material_fields(driver, row_idx: int = 0):
+    """Fill all BiologicalMaterial fields from YAML example in a table row.
+
+    Args:
+        driver: Selenium WebDriver
+        row_idx: Row index for cell naming (default 0)
+    """
+    prefix = f"cell-{row_idx}-"
+
+    # Required field
+    fill_field(driver, f"{prefix}unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True)
+
+    # All optional fields from YAML example
+    fill_field(driver, f"{prefix}organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True)
+    fill_field(driver, f"{prefix}genus", BIO_MAT_EXAMPLE["genus"], trigger_change=True)
+    fill_field(driver, f"{prefix}species", BIO_MAT_EXAMPLE["species"], trigger_change=True)
+    fill_field(
+        driver,
+        f"{prefix}infraspecific_name",
+        BIO_MAT_EXAMPLE["infraspecific_name"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}accession_number",
+        BIO_MAT_EXAMPLE["accession_number"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_description",
+        BIO_MAT_EXAMPLE["biological_material_description"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_latitude",
+        str(BIO_MAT_EXAMPLE["biological_material_latitude"]),
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_longitude",
+        str(BIO_MAT_EXAMPLE["biological_material_longitude"]),
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_altitude",
+        str(BIO_MAT_EXAMPLE["biological_material_altitude"]),
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_coordinates_uncertainty",
+        BIO_MAT_EXAMPLE["biological_material_coordinates_uncertainty"],
+        trigger_change=True,
+    )
+    fill_field(
+        driver,
+        f"{prefix}biological_material_preprocessing",
+        BIO_MAT_EXAMPLE["biological_material_preprocessing"],
+        trigger_change=True,
+    )
+
+    # List field: external_references (one per line in textarea)
+    ext_refs = BIO_MAT_EXAMPLE.get("external_references", [])
+    if ext_refs:
+        fill_field(driver, f"{prefix}external_references", "\n".join(ext_refs), trigger_change=True)
+
+
 def expand_optional_fields(driver):
     """Expand the optional fields section if collapsed."""
     try:
@@ -255,90 +425,24 @@ class TestCreateInvestigationAllFields:
                 break
         time.sleep(CLICK_DELAY)
 
-        # Add contact from YAML Person example
+        # Add contact from YAML Person example - fill ALL fields
         expand_optional_fields(browser)
         click_button(browser, "btn-nested-contacts")
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-name", PERSON_EXAMPLE["name"], trigger_change=True)
-        fill_field(browser, "cell-0-email", PERSON_EXAMPLE["email"], trigger_change=True)
-        fill_field(
-            browser, "cell-0-institution", PERSON_EXAMPLE["institution"], trigger_change=True
-        )
-        fill_field(browser, "cell-0-role", PERSON_EXAMPLE["role"], trigger_change=True)
-        fill_field(browser, "cell-0-orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
+        fill_all_person_fields(browser)
 
         click_button(browser, "table-save")
         time.sleep(CLICK_DELAY)
 
-        # Add study from YAML Study example - fill ALL available fields
+        # Add study from YAML Study example - fill ALL fields
         expand_optional_fields(browser)
         click_button(browser, "btn-nested-studies")
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Required fields
-        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
-        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
-
-        # All optional fields from YAML example
-        fill_field(browser, "cell-0-description", STUDY_EXAMPLE["description"], trigger_change=True)
-        fill_field(browser, "cell-0-start_date", STUDY_EXAMPLE["start_date"], trigger_change=True)
-        fill_field(browser, "cell-0-end_date", STUDY_EXAMPLE["end_date"], trigger_change=True)
-        fill_field(
-            browser,
-            "cell-0-contact_institution",
-            STUDY_EXAMPLE["contact_institution"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-experimental_site_name",
-            STUDY_EXAMPLE["experimental_site_name"],
-            trigger_change=True,
-        )
-        fill_field(browser, "cell-0-latitude", str(STUDY_EXAMPLE["latitude"]), trigger_change=True)
-        fill_field(
-            browser, "cell-0-longitude", str(STUDY_EXAMPLE["longitude"]), trigger_change=True
-        )
-        fill_field(browser, "cell-0-altitude", str(STUDY_EXAMPLE["altitude"]), trigger_change=True)
-        fill_field(
-            browser,
-            "cell-0-growth_facility_type",
-            STUDY_EXAMPLE["growth_facility_type"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-experimental_design_type",
-            STUDY_EXAMPLE["experimental_design_type"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-experimental_design_description",
-            STUDY_EXAMPLE["experimental_design_description"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-observation_unit_description",
-            STUDY_EXAMPLE["observation_unit_description"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-cultural_practices",
-            STUDY_EXAMPLE["cultural_practices"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-map_of_experimental_design",
-            STUDY_EXAMPLE["map_of_experimental_design"],
-            trigger_change=True,
-        )
+        fill_all_study_fields(browser)
 
         click_button(browser, "table-save")
         time.sleep(CLICK_DELAY)
@@ -404,14 +508,8 @@ class TestAddNestedContacts:
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Fill contact fields from YAML Person example
-        fill_field(browser, "cell-0-name", PERSON_EXAMPLE["name"], trigger_change=True)
-        fill_field(browser, "cell-0-email", PERSON_EXAMPLE["email"], trigger_change=True)
-        fill_field(
-            browser, "cell-0-institution", PERSON_EXAMPLE["institution"], trigger_change=True
-        )
-        fill_field(browser, "cell-0-role", PERSON_EXAMPLE["role"], trigger_change=True)
-        fill_field(browser, "cell-0-orcid", PERSON_EXAMPLE["orcid"], trigger_change=True)
+        # Fill ALL contact fields from YAML Person example
+        fill_all_person_fields(browser)
 
         # Click "Save & Back" button
         click_button(browser, "table-save")
@@ -560,9 +658,8 @@ class TestAddNestedStudy:
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Fill study fields from YAML Study example
-        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
-        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
+        # Fill ALL study fields from YAML Study example
+        fill_all_study_fields(browser)
 
         # Save & Back
         click_button(browser, "table-save")
@@ -685,12 +782,11 @@ class TestNestedEntityEditing:
         # Click on studies nested field button
         click_button(browser, "btn-nested-studies")
 
-        # Add a Study row from YAML example
+        # Add a Study row from YAML example - fill ALL fields
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
-        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
+        fill_all_study_fields(browser)
 
         # Save the Study first to ensure it's persisted
         click_button(browser, "table-save")
@@ -749,14 +845,13 @@ class TestNestedEntityEditing:
                 break
         time.sleep(CLICK_DELAY)
 
-        # Expand optional fields and add a Study from YAML example
+        # Expand optional fields and add a Study from YAML example - fill ALL fields
         expand_optional_fields(browser)
         click_button(browser, "btn-nested-studies")
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        fill_field(browser, "cell-0-unique_id", STUDY_EXAMPLE["unique_id"], trigger_change=True)
-        fill_field(browser, "cell-0-title", STUDY_EXAMPLE["title"], trigger_change=True)
+        fill_all_study_fields(browser)
 
         # Save and go back to Investigation
         click_button(browser, "table-save")
@@ -788,61 +883,7 @@ class TestNestedEntityEditing:
         click_button(browser, "table-add-row")
         time.sleep(CLICK_DELAY)
 
-        # Required field
-        fill_field(browser, "cell-0-unique_id", BIO_MAT_EXAMPLE["unique_id"], trigger_change=True)
-
-        # All optional fields from YAML example
-        fill_field(browser, "cell-0-organism", BIO_MAT_EXAMPLE["organism"], trigger_change=True)
-        fill_field(browser, "cell-0-genus", BIO_MAT_EXAMPLE["genus"], trigger_change=True)
-        fill_field(browser, "cell-0-species", BIO_MAT_EXAMPLE["species"], trigger_change=True)
-        fill_field(
-            browser,
-            "cell-0-infraspecific_name",
-            BIO_MAT_EXAMPLE["infraspecific_name"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-accession_number",
-            BIO_MAT_EXAMPLE["accession_number"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_description",
-            BIO_MAT_EXAMPLE["biological_material_description"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_latitude",
-            str(BIO_MAT_EXAMPLE["biological_material_latitude"]),
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_longitude",
-            str(BIO_MAT_EXAMPLE["biological_material_longitude"]),
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_altitude",
-            str(BIO_MAT_EXAMPLE["biological_material_altitude"]),
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_coordinates_uncertainty",
-            BIO_MAT_EXAMPLE["biological_material_coordinates_uncertainty"],
-            trigger_change=True,
-        )
-        fill_field(
-            browser,
-            "cell-0-biological_material_preprocessing",
-            BIO_MAT_EXAMPLE["biological_material_preprocessing"],
-            trigger_change=True,
-        )
+        fill_all_biological_material_fields(browser)
 
         # Save
         click_button(browser, "table-save")
