@@ -437,13 +437,49 @@ def create_app(state: AppState | None = None) -> FastAPI:
         try:
             instance = helper.create(**values)
             node = state.add_node(entity_type, instance)
+            state.editing_node_id = node.id
+
+            # Load nested items from the new entity for editing
+            state.current_nested_items = {}
+            if hasattr(instance, "model_dump"):
+                data = instance.model_dump(exclude_none=True)
+                for field_name in helper.nested_fields:
+                    if field_name in data and data[field_name]:
+                        items = data[field_name]
+                        if isinstance(items, list):
+                            state.current_nested_items[field_name] = [
+                                item.model_dump() if hasattr(item, "model_dump") else item
+                                for item in items
+                            ]
+
+            # Return the edit form for the newly created entity
+            fields = _get_field_data(helper)
+            edit_values = (
+                instance.model_dump(exclude_none=True) if hasattr(instance, "model_dump") else {}
+            )
+
+            auto_fields = set()
+            if "miappe_version" in helper.all_fields:
+                edit_values["miappe_version"] = facade.version
+                auto_fields.add("miappe_version")
 
             response = templates.TemplateResponse(
                 request,
-                "partials/form_success.html",
+                "partials/form.html",
                 {
-                    "message": f"Created {entity_type}: {node.label}",
-                    "node": node.to_dict(),
+                    "entity_type": entity_type,
+                    "is_edit": True,
+                    "node_id": node.id,
+                    "description": helper.description,
+                    "ontology_term": helper.ontology_term,
+                    "required_fields": [f for f in fields if f["required"]],
+                    "optional_fields": [
+                        f for f in fields if not f["required"] and not _is_nested_field(f)
+                    ],
+                    "nested_fields": [f for f in fields if _is_nested_field(f)],
+                    "values": edit_values,
+                    "auto_fields": auto_fields,
+                    "success_message": f"Created {entity_type}: {node.label}",
                 },
             )
             response.headers["HX-Trigger"] = "entityCreated"
