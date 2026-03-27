@@ -1342,20 +1342,23 @@ def _build_breadcrumb(state: AppState) -> list[dict]:
                 }
             )
 
-    # Nested contexts
-    for ctx in state.nested_edit_stack:
+    # Nested contexts - only show the current level, not intermediate ones
+    if state.nested_edit_stack:
+        ctx = state.nested_edit_stack[-1]  # Current context only
         breadcrumb.append(
             {
                 "label": ctx.field_name,
-                "entity_type": ctx.entity_type,
-                "url": None,  # Table views don't have direct URL
+                "entity_type": ctx.parent_entity_type,
+                "url": f"/form/{ctx.parent_entity_type}/{state.editing_node_id}"
+                if state.editing_node_id
+                else None,
             }
         )
         breadcrumb.append(
             {
                 "label": f"{ctx.entity_type}[{ctx.row_idx}]",
                 "entity_type": ctx.entity_type,
-                "url": None,  # Current position
+                "url": None,  # Current position - no link
             }
         )
 
