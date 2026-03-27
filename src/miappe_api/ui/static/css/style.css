@@ -76,104 +76,11 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
-.sidebar {
-    grid-area: sidebar;
-    background: #f9fafb;
-    border-right: 1px solid #e5e7eb;
-    padding: 1rem;
-    overflow-y: auto;
-}
-
 .main {
     grid-area: main;
     padding: 1.5rem;
     overflow-y: auto;
     background: white;
-}
-
-/* Sidebar */
-.sidebar-title {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: #374151;
-}
-
-.entity-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.tree-empty {
-    color: #9ca3af;
-    font-style: italic;
-    font-size: 0.875rem;
-}
-
-/* Tree nodes */
-.tree-node {
-    padding: 0.5rem;
-    cursor: pointer;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: background 0.15s;
-}
-
-.tree-node:hover {
-    background: #f3f4f6;
-}
-
-.tree-node.selected {
-    background: #dbeafe;
-}
-
-.tree-node-content {
-    flex-grow: 1;
-    min-width: 0;
-}
-
-.tree-node-label {
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tree-node-type {
-    font-size: 0.75rem;
-    color: #6b7280;
-}
-
-.tree-node-icon {
-    color: #6b7280;
-    font-size: 1rem;
-}
-
-.tree-node-delete {
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.tree-node:hover .tree-node-delete {
-    opacity: 1;
-}
-
-.tree-node-nested {
-    font-size: 0.9em;
-}
-
-.tree-children {
-    margin-left: 1rem;
-    border-left: 1px solid #e5e7eb;
-    padding-left: 0.5rem;
-}
-
-.tree-children {
-    margin-left: 1rem;
 }
 
 /* Buttons */

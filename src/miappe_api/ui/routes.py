@@ -292,20 +292,6 @@ def create_app(state: AppState | None = None) -> FastAPI:
             },
         )
 
-    @app.get("/sidebar", response_class=HTMLResponse)
-    async def sidebar(request: Request):
-        """Refresh the sidebar."""
-        state = get_state()
-        return templates.TemplateResponse(
-            request,
-            "partials/sidebar.html",
-            {
-                "root_types": state.get_root_entity_types()[:3],
-                "tree_nodes": state.get_tree_data(),
-                "editing_node_id": state.editing_node_id,
-            },
-        )
-
     @app.get("/form/{entity_type}", response_class=HTMLResponse)
     async def new_entity_form(request: Request, entity_type: str):
         """Render a new entity form."""
@@ -640,13 +626,11 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         state.delete_node(node_id)
 
+        # Return welcome page with delete notification
         return templates.TemplateResponse(
             request,
-            "partials/sidebar.html",
+            "index.html",
             {
-                "root_types": state.get_root_entity_types()[:3],
-                "tree_nodes": state.get_tree_data(),
-                "editing_node_id": state.editing_node_id,
                 "notification": {
                     "type": "warning",
                     "message": f"Deleted {entity_type}: {label}",

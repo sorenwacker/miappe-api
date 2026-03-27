@@ -58,26 +58,6 @@ class TestIndex:
         assert "Investigation" in response.text
 
 
-class TestSidebar:
-    """Tests for the sidebar partial."""
-
-    def test_sidebar_returns_partial(self, client):
-        """Sidebar route returns partial HTML."""
-        response = client.get("/sidebar")
-        assert response.status_code == 200
-        assert "Project" in response.text
-
-    def test_sidebar_empty_initially(self, client):
-        """Sidebar shows empty message when no entities."""
-        response = client.get("/sidebar")
-        assert "No entities created yet" in response.text
-
-    def test_sidebar_shows_entity_after_create(self, client_with_entity):
-        """Sidebar shows entity after creation."""
-        response = client_with_entity.get("/sidebar")
-        assert "Test Investigation" in response.text
-
-
 class TestForm:
     """Tests for entity forms."""
 
@@ -147,11 +127,13 @@ class TestEditEntity:
 
     def test_edit_form_shows_values(self, client_with_entity):
         """Edit form shows existing values."""
-        sidebar = client_with_entity.get("/sidebar")
-        assert "Test Investigation" in sidebar.text
+        # After create, we get the edit form with the created data
+        state = client_with_entity.app.state.ui_state
+        node_id = list(state.nodes_by_id.keys())[0]
 
-        response = client_with_entity.get("/form/Investigation")
+        response = client_with_entity.get(f"/form/Investigation/{node_id}")
         assert response.status_code == 200
+        assert "Test Investigation" in response.text
 
     def test_edit_unknown_node_404(self, client):
         """Edit nonexistent node returns 404."""
@@ -174,17 +156,15 @@ class TestDeleteEntity:
         )
         assert create_response.status_code == 200
 
-        sidebar = client.get("/sidebar")
-        assert "To Delete" in sidebar.text
-
         state = client.app.state.ui_state
+        assert len(state.nodes_by_id) == 1
         node_id = list(state.nodes_by_id.keys())[0]
 
         delete_response = client.delete(f"/entity/{node_id}")
         assert delete_response.status_code == 200
 
-        sidebar_after = client.get("/sidebar")
-        assert "To Delete" not in sidebar_after.text
+        # Verify node was removed from state
+        assert len(state.nodes_by_id) == 0
 
     def test_delete_unknown_node_error(self, client):
         """Delete nonexistent node returns error."""
