@@ -39,6 +39,11 @@ function confirmDelete(nodeId, nodeLabel) {
 
 // Field validation rules for specific fields
 var fieldValidators = {
+    // Email validation
+    'email': function(value) {
+        if (!value) return true;
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
+    },
     // Geographic coordinates (used in Study and other entities)
     'latitude': function(value) {
         if (!value) return true;
@@ -115,7 +120,7 @@ function validateTableCell(input) {
 
 // Validate all table cells on input change
 document.addEventListener('input', function(e) {
-    if (e.target.closest('.data-table') && e.target.classList.contains('form-input')) {
+    if (e.target.classList.contains('form-input')) {
         validateTableCell(e.target);
     }
 });

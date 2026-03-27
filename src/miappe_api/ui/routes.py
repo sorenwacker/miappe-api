@@ -551,15 +551,47 @@ def create_app(state: AppState | None = None) -> FastAPI:
             instance = helper.create(**values)
             state.update_node(node_id, instance)
 
-            # Clear nested items after successful save
+            # Reload nested items from saved instance
             state.current_nested_items = {}
+            if hasattr(instance, "model_dump"):
+                data = instance.model_dump(exclude_none=True)
+                for field_name in helper.nested_fields:
+                    if field_name in data and data[field_name]:
+                        items = data[field_name]
+                        if isinstance(items, list):
+                            state.current_nested_items[field_name] = [
+                                item.model_dump() if hasattr(item, "model_dump") else item
+                                for item in items
+                            ]
+
+            # Stay on the form with success message
+            fields = _get_field_data(helper)
+            edit_values = (
+                instance.model_dump(exclude_none=True) if hasattr(instance, "model_dump") else {}
+            )
+
+            auto_fields = set()
+            if "miappe_version" in helper.all_fields:
+                edit_values["miappe_version"] = facade.version
+                auto_fields.add("miappe_version")
 
             response = templates.TemplateResponse(
                 request,
-                "partials/form_success.html",
+                "partials/form.html",
                 {
-                    "message": f"Updated {entity_type}: {node.label}",
-                    "node": node.to_dict(),
+                    "entity_type": entity_type,
+                    "is_edit": True,
+                    "node_id": node_id,
+                    "description": helper.description,
+                    "ontology_term": helper.ontology_term,
+                    "required_fields": [f for f in fields if f["required"]],
+                    "optional_fields": [
+                        f for f in fields if not f["required"] and not _is_nested_field(f)
+                    ],
+                    "nested_fields": [f for f in fields if _is_nested_field(f)],
+                    "values": edit_values,
+                    "auto_fields": auto_fields,
+                    "success_message": f"Saved {entity_type}: {node.label}",
                 },
             )
             response.headers["HX-Trigger"] = "entityUpdated"
@@ -1231,10 +1263,27 @@ def _collect_form_values(form_data, helper) -> dict:
 
 
 def _format_validation_errors(e: ValidationError) -> str:
-    """Format validation errors for display."""
-    return "; ".join(
-        f"{'.'.join(str(loc) for loc in err['loc'])}: {err['msg']}" for err in e.errors()
-    )
+    """Format validation errors for display with user-friendly messages."""
+    friendly_messages = []
+    for err in e.errors():
+        field = ".".join(str(loc) for loc in err["loc"])
+        msg = err["msg"]
+
+        # Make common error messages more user-friendly
+        if "pattern" in msg.lower() and "email" in field.lower():
+            msg = "Invalid email format"
+        elif "pattern" in msg.lower() and ("date" in field.lower() or "date" in msg.lower()):
+            msg = "Invalid date format (use YYYY-MM-DD)"
+        elif "pattern" in msg.lower() and "orcid" in field.lower():
+            msg = "Invalid ORCID format (use XXXX-XXXX-XXXX-XXXX)"
+        elif "pattern" in msg.lower():
+            msg = "Invalid format"
+        elif "required" in msg.lower():
+            msg = "This field is required"
+
+        friendly_messages.append(f"{field}: {msg}")
+
+    return "; ".join(friendly_messages)
 
 
 def _error_response(request: Request, templates: Jinja2Templates, message: str) -> HTMLResponse:
