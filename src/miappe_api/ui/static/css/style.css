@@ -16,7 +16,7 @@ body {
 /* Layout */
 .layout {
     display: grid;
-    grid-template: "header header" auto "sidebar main" 1fr / 200px 1fr;
+    grid-template: "header" auto "main" 1fr / 1fr;
     min-height: 100vh;
 }
 
@@ -33,6 +33,12 @@ body {
 .header-title {
     font-size: 1.25rem;
     font-weight: 600;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .header-controls {
@@ -53,6 +59,21 @@ body {
     color: #1f2937;
     font-size: 0.875rem;
     cursor: pointer;
+}
+
+.btn-header {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-header:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .sidebar {

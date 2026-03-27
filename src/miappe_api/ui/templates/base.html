@@ -11,6 +11,17 @@
     <div class="layout">
         <header class="header">
             <h1 class="header-title">MIAPPE-API</h1>
+            <div class="header-actions">
+                {% for entity_type in root_types %}
+                <button class="btn btn-header"
+                        hx-get="/form/{{ entity_type }}"
+                        hx-target="#main"
+                        hx-swap="innerHTML"
+                        data-testid="btn-new-{{ entity_type|lower }}">
+                    + {{ entity_type }}
+                </button>
+                {% endfor %}
+            </div>
             <div class="header-controls">
                 <label for="profile-select">Profile:</label>
                 <select id="profile-select"
@@ -24,13 +35,6 @@
                 </select>
             </div>
         </header>
-
-        <aside class="sidebar" id="sidebar"
-               hx-get="/sidebar"
-               hx-trigger="entityCreated from:body, entityUpdated from:body"
-               hx-swap="innerHTML">
-            {% include "partials/sidebar.html" %}
-        </aside>
 
         <main class="main" id="main">
             {% block content %}
