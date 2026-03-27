@@ -1719,3 +1719,108 @@ class TestExcelExport:
                 break
 
         assert found, "Investigation data not found in export"
+
+    def test_export_contains_nested_entities(self, browser):
+        """Verify exported Excel contains nested entities (Study, Person)."""
+        from openpyxl import load_workbook
+
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-NESTED-EXPORT-001")
+        fill_field(browser, "input-title", "Nested Export Test")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Refresh and select the created investigation
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Nested Export Test" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Add a contact (Person)
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-contacts")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_field(browser, "cell-0-name", "Export Test Person", trigger_change=True)
+        fill_field(browser, "cell-0-email", "export@test.com", trigger_change=True)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Add a study
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_field(browser, "cell-0-unique_id", "STU-EXPORT-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Export Test Study", trigger_change=True)
+
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Save the investigation
+        click_button(browser, "btn-update")
+        time.sleep(CLICK_DELAY)
+
+        # Download export
+        import urllib.request
+        from io import BytesIO
+
+        req = urllib.request.Request(f"{BASE_URL}/export")
+        response = urllib.request.urlopen(req, timeout=10)
+        content = response.read()
+
+        # Load workbook and verify all entity sheets exist
+        wb = load_workbook(BytesIO(content))
+
+        # Verify Investigation sheet
+        assert "Investigation" in wb.sheetnames, f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
+
+        # Verify Person sheet (contacts)
+        assert "Person" in wb.sheetnames, f"Missing Person sheet. Sheets: {wb.sheetnames}"
+
+        # Verify Study sheet
+        assert "Study" in wb.sheetnames, f"Missing Study sheet. Sheets: {wb.sheetnames}"
+
+        # Verify Person data
+        ws_person = wb["Person"]
+        person_rows = list(ws_person.values)
+        person_headers = person_rows[0]
+        person_data = person_rows[1:] if len(person_rows) > 1 else []
+
+        assert "name" in person_headers
+        found_person = False
+        for row in person_data:
+            row_dict = dict(zip(person_headers, row, strict=False))
+            if row_dict.get("name") == "Export Test Person":
+                found_person = True
+                assert row_dict.get("email") == "export@test.com"
+                break
+        assert found_person, "Person data not found in export"
+
+        # Verify Study data
+        ws_study = wb["Study"]
+        study_rows = list(ws_study.values)
+        study_headers = study_rows[0]
+        study_data = study_rows[1:] if len(study_rows) > 1 else []
+
+        assert "unique_id" in study_headers
+        found_study = False
+        for row in study_data:
+            row_dict = dict(zip(study_headers, row, strict=False))
+            if row_dict.get("unique_id") == "STU-EXPORT-001":
+                found_study = True
+                assert row_dict.get("title") == "Export Test Study"
+                break
+        assert found_study, "Study data not found in export"

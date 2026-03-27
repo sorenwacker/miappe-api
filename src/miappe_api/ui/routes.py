@@ -398,8 +398,9 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 cleaned_items = []
                 for item in items:
                     if isinstance(item, dict):
-                        cleaned = {k: v for k, v in item.items() if not k.startswith("_")}
-                        if any(cleaned.values()):
+                        # Remove internal keys and empty strings
+                        cleaned = {k: v for k, v in item.items() if not k.startswith("_") and v}
+                        if cleaned:
                             cleaned_items.append(cleaned)
                 if cleaned_items:
                     values[field_name] = cleaned_items
@@ -816,61 +817,97 @@ def create_app(state: AppState | None = None) -> FastAPI:
     async def export_excel(_request: Request):
         """Export current entity data to Excel file.
 
-        Returns an Excel workbook with one sheet per entity type.
+        Returns an Excel workbook with one sheet per entity type,
+        including all nested entities extracted recursively.
         """
         from openpyxl import Workbook
 
         state = get_state()
+        facade = state.get_or_create_facade()
 
         wb = Workbook()
         # Remove default sheet
         wb.remove(wb.active)
 
-        # Group nodes by entity type
-        nodes_by_type: dict[str, list[TreeNode]] = {}
-        for node in state.nodes_by_id.values():
-            if node.entity_type not in nodes_by_type:
-                nodes_by_type[node.entity_type] = []
-            nodes_by_type[node.entity_type].append(node)
+        # Collect all entities by type (including nested ones)
+        entities_by_type: dict[str, list[dict]] = {}
 
-        if not nodes_by_type:
+        def extract_nested_entities(data: dict, entity_type: str) -> None:
+            """Recursively extract nested entities from data."""
+            helper = getattr(facade, entity_type, None)
+            if not helper:
+                return
+
+            for field_name, nested_type in helper.nested_fields.items():
+                if field_name in data and data[field_name]:
+                    nested_items = data[field_name]
+                    if isinstance(nested_items, list):
+                        for item in nested_items:
+                            if hasattr(item, "model_dump"):
+                                item_data = item.model_dump(exclude_none=True)
+                            elif isinstance(item, dict):
+                                item_data = item.copy()
+                            else:
+                                continue
+
+                            if nested_type not in entities_by_type:
+                                entities_by_type[nested_type] = []
+                            entities_by_type[nested_type].append(item_data)
+
+                            # Recursively extract from this nested item
+                            extract_nested_entities(item_data, nested_type)
+
+        # Process all root nodes
+        for node in state.nodes_by_id.values():
+            entity_type = node.entity_type
+            if entity_type not in entities_by_type:
+                entities_by_type[entity_type] = []
+
+            if hasattr(node.instance, "model_dump"):
+                data = node.instance.model_dump(exclude_none=True)
+            else:
+                data = {}
+
+            entities_by_type[entity_type].append(data)
+
+            # Extract nested entities recursively
+            extract_nested_entities(data, entity_type)
+
+        if not entities_by_type:
             # Create empty workbook with info sheet
             ws = wb.create_sheet("Info")
             ws.append(["No entities to export"])
         else:
-            facade = state.get_or_create_facade()
+            for entity_type, entities in entities_by_type.items():
+                if not entities:
+                    continue
 
-            for entity_type, nodes in nodes_by_type.items():
                 ws = wb.create_sheet(entity_type)
 
-                # Get field names from helper
+                # Get field names from helper (exclude nested fields for cleaner output)
                 helper = getattr(facade, entity_type, None)
                 if helper:
-                    columns = list(helper.all_fields)
+                    nested_fields = set(helper.nested_fields.keys())
+                    columns = [f for f in helper.all_fields if f not in nested_fields]
                 else:
-                    # Fallback: get keys from first instance
-                    if nodes and hasattr(nodes[0].instance, "model_dump"):
-                        columns = list(nodes[0].instance.model_dump().keys())
-                    else:
-                        columns = ["value"]
+                    # Fallback: get keys from first entity, excluding nested
+                    columns = [k for k in entities[0].keys() if not isinstance(entities[0].get(k), list)]
 
                 # Write header
                 ws.append(columns)
 
                 # Write data rows
-                for node in nodes:
-                    if hasattr(node.instance, "model_dump"):
-                        data = node.instance.model_dump(exclude_none=True)
-                    else:
-                        data = {}
-
+                for entity_data in entities:
                     row = []
                     for col in columns:
-                        value = data.get(col, "")
-                        # Convert lists to comma-separated strings
+                        value = entity_data.get(col, "")
+                        # Convert simple lists to comma-separated strings
                         if isinstance(value, list):
-                            value = ", ".join(str(v) for v in value)
-                        # Handle nested objects by showing count
+                            # Only stringify if it's a list of primitives
+                            if value and not isinstance(value[0], dict):
+                                value = ", ".join(str(v) for v in value)
+                            else:
+                                value = f"[{len(value)} items]"
                         elif isinstance(value, dict):
                             value = "[object]"
                         row.append(value)
