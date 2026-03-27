@@ -608,6 +608,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         columns = []
         column_types = {}
+        column_patterns = {}
         required_columns = set()
         has_nested_children = False
         if nested_helper:
@@ -619,6 +620,10 @@ def create_app(state: AppState | None = None) -> FastAPI:
             for col in columns:
                 info = nested_helper.field_info(col)
                 column_types[col] = info.get("type", "string")
+                # Extract pattern from constraints if available
+                constraints = info.get("constraints", {})
+                if constraints and "pattern" in constraints:
+                    column_patterns[col] = constraints["pattern"]
         else:
             columns = ["value"]
             column_types["value"] = "string"
@@ -652,6 +657,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "entity_type": nested_entity_type,
                 "columns": columns,
                 "column_types": column_types,
+                "column_patterns": column_patterns,
                 "required_columns": required_columns,
                 "has_nested_children": has_nested_children,
                 "rows": rows,
@@ -690,14 +696,18 @@ def create_app(state: AppState | None = None) -> FastAPI:
         parent_helper = getattr(facade, parent_entity_type, None)
         entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
 
-        # Get column types for the nested entity
+        # Get column types and patterns for the nested entity
         column_types = {}
+        column_patterns = {}
         if entity_type:
             nested_helper = getattr(facade, entity_type, None)
             if nested_helper:
                 for col in columns:
                     info = nested_helper.field_info(col)
                     column_types[col] = info.get("type", "string")
+                    constraints = info.get("constraints", {})
+                    if constraints and "pattern" in constraints:
+                        column_patterns[col] = constraints["pattern"]
 
         return templates.TemplateResponse(
             request,
@@ -706,6 +716,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "row": new_row,
                 "columns": columns,
                 "column_types": column_types,
+                "column_patterns": column_patterns,
                 "field_name": field_name,
                 "parent_entity_type": parent_entity_type,
                 "entity_type": entity_type,
@@ -841,6 +852,13 @@ def create_app(state: AppState | None = None) -> FastAPI:
         # Get field info for the nested entity
         fields = _get_field_data(nested_helper) if nested_helper else []
 
+        # Merge context nested items into values for counter display
+        values = item_data.copy() if isinstance(item_data, dict) else {}
+        if state.nested_edit_stack:
+            ctx = state.nested_edit_stack[-1]
+            for nf, nv in ctx.nested_items.items():
+                values[nf] = nv
+
         return templates.TemplateResponse(
             request,
             "partials/nested_form.html",
@@ -856,7 +874,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                     f for f in fields if not f["required"] and not _is_nested_field(f)
                 ],
                 "nested_fields": [f for f in fields if _is_nested_field(f)],
-                "values": item_data,
+                "values": values,
                 "editing_node_id": state.editing_node_id,
                 "breadcrumb": _build_breadcrumb(state),
             },

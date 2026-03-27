@@ -43,10 +43,12 @@
                data-type="integer"
                data-testid="cell-{{ row._idx }}-{{ col }}">
         {% else %}
+        {% set pattern = column_patterns.get(col) if column_patterns else none %}
         <input type="text"
                class="form-input"
                name="{{ col }}"
                value="{{ row.get(col, '') }}"
+               {% if pattern %}pattern="{{ pattern }}"{% endif %}
                hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
                hx-trigger="change"
                hx-swap="none"
