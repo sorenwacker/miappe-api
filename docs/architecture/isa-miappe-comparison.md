@@ -230,12 +230,117 @@ obs_unit = combined.ObservationUnit(identifier="OU-001", observation_unit_type="
 investigation = combined.Investigation(identifier="INV-001", title="Integrated Study")
 ```
 
+## MIAPPE as an ISA Profile
+
+MIAPPE was explicitly designed as an **ISA Configuration Profile**, not a separate standard. This has important implications for integration.
+
+### What "ISA Profile" Means Technically
+
+An ISA profile is implemented through:
+
+| Component | Description |
+|-----------|-------------|
+| XML Configuration Files | Define required/optional fields using [ISAconfigurator](https://github.com/ISA-tools/ISAconfigurator) |
+| Domain-Specific Extensions | Additional columns in Study and Assay files |
+| Validation Rules | Custom validators for MIAPPE requirements |
+| Official Repository | [MIAPPE/ISA-Tab-for-plant-phenotyping](https://github.com/MIAPPE/ISA-Tab-for-plant-phenotyping) |
+
+### Official MIAPPE-to-ISA Mapping
+
+From the [MIAPPE 1.1 paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC7317793/):
+
+> "The MIAPPE data model is reconciled with the more generic data models underlying the ISA-Tab exchange format through key objects such as Investigation and Study."
+
+| MIAPPE Entity | ISA Mapping | Implementation Notes |
+|---------------|-------------|----------------------|
+| Investigation | Investigation | Direct mapping |
+| Study | Study | Direct mapping |
+| Person | Person | MIAPPE `name` vs ISA `first_name`/`last_name` |
+| Biological Material | **Source** | Germplasm stored as ISA Source |
+| Observation Unit | **Sample** | Plots/plants as ISA Samples |
+| Sample (sub-plant) | **Extract** | Leaf tissue etc. as Extracts |
+| Observed Variable | Trait Definition File | External file reference |
+| Environment | Growth Protocol | Parameters in protocol definition |
+| Event | Event-type Protocol | Discrete occurrences as protocol type |
+| Factor | Study Factor | Direct correspondence |
+| Data File | Data File | Direct correspondence |
+
+!!! note "Publication Conflict"
+    MIAPPE only supports Investigation-level publications, while ISA-Tab allows both Investigation and Study-level entries.
+
+### Existing Integration Tools
+
+| Tool | Language | Purpose | MIAPPE Support |
+|------|----------|---------|----------------|
+| [isa-api](https://github.com/ISA-tools/isa-api) | Python | ISA model manipulation | Via MIAPPE config files |
+| [isa4j](https://ipk-bit.github.io/isa4j/) | Java | High-performance ISA-Tab | Built-in MIAPPE validation |
+| [plant-brapi-to-isa](https://github.com/elixir-europe/plant-brapi-to-isa) | Python | BrAPI to ISA-Tab | MIAPPE-compliant output |
+| [FAIRDOM-SEEK](https://fair-dom.org/) | Ruby | Data management | Extended metadata for MIAPPE |
+| [MIAPPE Wizard](https://www.denbi.de/) | Web | Visual metadata creation | Native MIAPPE + ISA export |
+
+### Documented Challenges
+
+#### Scale Issues
+
+From the [FAIR Data presentation](https://moodle.france-bioinformatique.fr/):
+
+> "The ISA structure is not well-suited for large-scale plant phenotyping experiments with thousands of measurements per experiment."
+
+The isa4j library addresses this, achieving 1 million row writes in 43 seconds compared to 8.6 hours with Python isatools.
+
+#### Structural Mismatches
+
+| Challenge | Description |
+|-----------|-------------|
+| Process vs Event | ISA uses DAG of processes; MIAPPE uses flat event list |
+| Observation Hierarchy | ISA Sample graph vs MIAPPE Block/Plot/Plant hierarchy |
+| Protocol Parameters | Declared in Investigation, values in Study rows |
+| BrAPI Gaps | v1.3 missing fields; v2.0 better aligned |
+
+### Integration Feasibility Assessment
+
+| Aspect | Feasibility | Notes |
+|--------|-------------|-------|
+| Data model unification | High | Both share Investigation-Study hierarchy |
+| Validation | High | ISA config files + PPEO ontology |
+| Serialization | Medium | ISA-Tab at scale requires isa4j; prefer JSON |
+| BrAPI integration | High | BrAPI v2 is MIAPPE 1.1 compatible |
+| Multi-omics + Phenotyping | High | ISA Assay + MIAPPE observations coexist |
+
+### Recommended Approach
+
+Based on the [FAIRDOM-SEEK model](https://fair-dom.org/fairdom-in-use/plant-is-and-miappe):
+
+1. Use ISA as the structural backbone
+2. Implement MIAPPE entities as extensions (current `combined_v1.0.yaml` approach)
+3. Map BiologicalMaterial to ISA Source with additional characteristics
+4. Map ObservationUnit to ISA Sample
+5. Keep ObservedVariable parallel to ISA Assay (not a replacement)
+6. Use PPEO ontology terms for semantic interoperability
+
+### The PPEO Ontology
+
+The [Plant Phenotyping Experiment Ontology (PPEO)](https://github.com/MIAPPE/MIAPPE-ontology) provides:
+
+- OWL classes for MIAPPE sections
+- Data properties with value types and cardinality
+- Object properties for entity relations
+- Cross-resource labels for ISA-Tab and BrAPI mapping
+
+Available at: [AgroPortal PPEO](https://agroportal.lirmm.fr/ontologies/PPEO)
+
 ## References
 
 - [ISA Tools - Official Site](https://isa-tools.org/)
 - [ISA Abstract Model Specification](https://isa-specs.readthedocs.io/en/latest/isamodel.html)
 - [ISA-Tab Format Specification](https://isa-specs.readthedocs.io/en/latest/isatab.html)
+- [ISA Configurations](https://isa-tools.org/format/configurations/index.html)
 - [MIAPPE Official Site](https://www.miappe.org/)
 - [MIAPPE GitHub Repository](https://github.com/MIAPPE/MIAPPE)
 - [MIAPPE 1.1 Paper (Papoutsoglou et al., 2020)](https://pmc.ncbi.nlm.nih.gov/articles/PMC7317793/)
-- [ISA-Tab for Plant Phenotyping (MIAPPE-ISA mapping)](https://github.com/MIAPPE/ISA-Tab-for-plant-phenotyping)
+- [ISA-Tab for Plant Phenotyping (MIAPPE-ISA config)](https://github.com/MIAPPE/ISA-Tab-for-plant-phenotyping)
+- [PPEO Ontology on AgroPortal](https://agroportal.lirmm.fr/ontologies/PPEO)
+- [PPEO GitHub Repository](https://github.com/MIAPPE/MIAPPE-ontology)
+- [isa4j Java Library](https://ipk-bit.github.io/isa4j/)
+- [plant-brapi-to-isa Converter](https://github.com/elixir-europe/plant-brapi-to-isa)
+- [FAIRDOM-SEEK MIAPPE Project](https://fair-dom.org/fairdom-in-use/plant-is-and-miappe)
