@@ -283,6 +283,24 @@ body {
     border-color: #dc2626;
 }
 
+.form-input-readonly {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.form-input-readonly:focus {
+    border-color: #d1d5db;
+    box-shadow: none;
+}
+
+.auto-field {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: normal;
+    margin-left: 0.25rem;
+}
+
 .form-textarea {
     min-height: 80px;
     resize: vertical;
@@ -398,6 +416,16 @@ body {
     outline: 2px solid #2563eb;
     outline-offset: -2px;
     box-shadow: none;
+}
+
+.data-table td .form-input:invalid,
+.data-table td .form-input.invalid {
+    background-color: #fee2e2;
+    border-color: #dc2626;
+}
+
+.data-table td .form-input.invalid:focus {
+    outline-color: #dc2626;
 }
 
 .data-table tr:hover {

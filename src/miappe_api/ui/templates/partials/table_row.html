@@ -1,6 +1,48 @@
 <tr id="row-{{ row._idx }}" data-idx="{{ row._idx }}">
     {% for col in columns %}
     <td>
+        {% set col_type = column_types.get(col, 'string') if column_types else 'string' %}
+        {% if col_type == 'date' %}
+        <input type="text"
+               class="form-input"
+               name="{{ col }}"
+               value="{{ row.get(col, '') }}"
+               pattern="\d{4}-\d{2}-\d{2}"
+               placeholder="YYYY-MM-DD"
+               title="Date format: YYYY-MM-DD"
+               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
+               hx-trigger="change"
+               hx-swap="none"
+               data-field="{{ col }}"
+               data-type="date"
+               data-testid="cell-{{ row._idx }}-{{ col }}">
+        {% elif col_type == 'float' %}
+        <input type="text"
+               class="form-input"
+               name="{{ col }}"
+               value="{{ row.get(col, '') }}"
+               pattern="-?\d*\.?\d*"
+               title="Numeric value (e.g., 52.5 or -3.14)"
+               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
+               hx-trigger="change"
+               hx-swap="none"
+               data-field="{{ col }}"
+               data-type="float"
+               data-testid="cell-{{ row._idx }}-{{ col }}">
+        {% elif col_type == 'integer' %}
+        <input type="text"
+               class="form-input"
+               name="{{ col }}"
+               value="{{ row.get(col, '') }}"
+               pattern="-?\d*"
+               title="Integer value"
+               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
+               hx-trigger="change"
+               hx-swap="none"
+               data-field="{{ col }}"
+               data-type="integer"
+               data-testid="cell-{{ row._idx }}-{{ col }}">
+        {% else %}
         <input type="text"
                class="form-input"
                name="{{ col }}"
@@ -9,7 +51,9 @@
                hx-trigger="change"
                hx-swap="none"
                data-field="{{ col }}"
+               data-type="string"
                data-testid="cell-{{ row._idx }}-{{ col }}">
+        {% endif %}
     </td>
     {% endfor %}
     <td class="row-actions">

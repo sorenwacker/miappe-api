@@ -2,16 +2,19 @@
     <label class="form-label" for="field-{{ field.name }}">
         {{ field.name }}
         {% if field.required %}<span class="required">*</span>{% endif %}
+        {% if auto_fields and field.name in auto_fields %}<span class="auto-field">(auto)</span>{% endif %}
     </label>
 
     {% set value = values.get(field.name, '') %}
+    {% set is_auto = auto_fields and field.name in auto_fields %}
 
     {% if field.type == 'string' %}
     <input type="text"
            id="field-{{ field.name }}"
            name="{{ field.name }}"
-           class="form-input"
+           class="form-input{% if is_auto %} form-input-readonly{% endif %}"
            value="{{ value }}"
+           {% if is_auto %}readonly{% endif %}
            {% if field.required %}required{% endif %}
            data-testid="input-{{ field.name|replace('_', '-') }}">
 
@@ -47,11 +50,14 @@
     </div>
 
     {% elif field.type == 'date' %}
-    <input type="date"
+    <input type="text"
            id="field-{{ field.name }}"
            name="{{ field.name }}"
            class="form-input"
            value="{{ value }}"
+           pattern="\d{4}-\d{2}-\d{2}"
+           placeholder="YYYY-MM-DD"
+           title="Date format: YYYY-MM-DD (e.g., 2024-03-15)"
            {% if field.required %}required{% endif %}
            data-testid="input-{{ field.name|replace('_', '-') }}">
 

@@ -8,11 +8,12 @@ from __future__ import annotations
 import contextlib
 import uuid
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -248,6 +249,11 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         fields = _get_field_data(helper)
 
+        # Auto-populate values for certain fields
+        auto_values = {}
+        if "miappe_version" in helper.all_fields:
+            auto_values["miappe_version"] = facade.version
+
         return templates.TemplateResponse(
             request,
             "partials/form.html",
@@ -259,7 +265,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "ontology_term": helper.ontology_term,
                 "required_fields": [f for f in fields if f["required"]],
                 "optional_fields": [f for f in fields if not f["required"]],
-                "values": {},
+                "values": auto_values,
+                "auto_fields": set(auto_values.keys()),
             },
         )
 
@@ -305,6 +312,12 @@ def create_app(state: AppState | None = None) -> FastAPI:
                             for item in items
                         ]
 
+        # Auto-populate values for certain fields
+        auto_fields = set()
+        if "miappe_version" in helper.all_fields:
+            values["miappe_version"] = facade.version
+            auto_fields.add("miappe_version")
+
         return templates.TemplateResponse(
             request,
             "partials/form.html",
@@ -317,6 +330,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "required_fields": [f for f in fields if f["required"]],
                 "optional_fields": [f for f in fields if not f["required"]],
                 "values": values,
+                "auto_fields": auto_fields,
             },
         )
 
@@ -461,12 +475,17 @@ def create_app(state: AppState | None = None) -> FastAPI:
         nested_helper = getattr(facade, nested_entity_type, None)
 
         columns = []
+        column_types = {}
         if nested_helper:
             cols = list(nested_helper.required_fields) + list(nested_helper.optional_fields)
             nested = set(nested_helper.nested_fields.keys())
             columns = [c for c in cols if c not in nested]
+            for col in columns:
+                info = nested_helper.field_info(col)
+                column_types[col] = info.get("type", "string")
         else:
             columns = ["value"]
+            column_types["value"] = "string"
 
         # Check if we're in a nested context and use context's items if appropriate
         nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
@@ -496,6 +515,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "field_name": field_name,
                 "entity_type": nested_entity_type,
                 "columns": columns,
+                "column_types": column_types,
                 "rows": rows,
                 "parent_entity_type": entity_type,
                 "editing_node_id": state.editing_node_id,
@@ -528,9 +548,18 @@ def create_app(state: AppState | None = None) -> FastAPI:
         new_row["_idx"] = len(items_store[field_name])
         items_store[field_name].append(new_row)
 
-        # Get entity type for the row
+        # Get entity type for the row and column types
         parent_helper = getattr(facade, parent_entity_type, None)
         entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
+
+        # Get column types for the nested entity
+        column_types = {}
+        if entity_type:
+            nested_helper = getattr(facade, entity_type, None)
+            if nested_helper:
+                for col in columns:
+                    info = nested_helper.field_info(col)
+                    column_types[col] = info.get("type", "string")
 
         return templates.TemplateResponse(
             request,
@@ -538,6 +567,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
             {
                 "row": new_row,
                 "columns": columns,
+                "column_types": column_types,
                 "field_name": field_name,
                 "parent_entity_type": parent_entity_type,
                 "entity_type": entity_type,
@@ -781,6 +811,82 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state.current_nested_items = {}
         state.nested_edit_stack = []
         return HTMLResponse(content="OK")
+
+    @app.get("/export")
+    async def export_excel(_request: Request):
+        """Export current entity data to Excel file.
+
+        Returns an Excel workbook with one sheet per entity type.
+        """
+        from openpyxl import Workbook
+
+        state = get_state()
+
+        wb = Workbook()
+        # Remove default sheet
+        wb.remove(wb.active)
+
+        # Group nodes by entity type
+        nodes_by_type: dict[str, list[TreeNode]] = {}
+        for node in state.nodes_by_id.values():
+            if node.entity_type not in nodes_by_type:
+                nodes_by_type[node.entity_type] = []
+            nodes_by_type[node.entity_type].append(node)
+
+        if not nodes_by_type:
+            # Create empty workbook with info sheet
+            ws = wb.create_sheet("Info")
+            ws.append(["No entities to export"])
+        else:
+            facade = state.get_or_create_facade()
+
+            for entity_type, nodes in nodes_by_type.items():
+                ws = wb.create_sheet(entity_type)
+
+                # Get field names from helper
+                helper = getattr(facade, entity_type, None)
+                if helper:
+                    columns = list(helper.all_fields)
+                else:
+                    # Fallback: get keys from first instance
+                    if nodes and hasattr(nodes[0].instance, "model_dump"):
+                        columns = list(nodes[0].instance.model_dump().keys())
+                    else:
+                        columns = ["value"]
+
+                # Write header
+                ws.append(columns)
+
+                # Write data rows
+                for node in nodes:
+                    if hasattr(node.instance, "model_dump"):
+                        data = node.instance.model_dump(exclude_none=True)
+                    else:
+                        data = {}
+
+                    row = []
+                    for col in columns:
+                        value = data.get(col, "")
+                        # Convert lists to comma-separated strings
+                        if isinstance(value, list):
+                            value = ", ".join(str(v) for v in value)
+                        # Handle nested objects by showing count
+                        elif isinstance(value, dict):
+                            value = "[object]"
+                        row.append(value)
+                    ws.append(row)
+
+        # Save to BytesIO
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+
+        filename = f"miappe_export_{state.profile}.xlsx"
+        return StreamingResponse(
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @app.post("/validate", response_class=HTMLResponse)
     async def validate_form(request: Request):

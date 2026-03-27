@@ -664,11 +664,11 @@ class TestCreateInvestigationAllFields:
         expand_optional_fields(browser)
 
         # Fill all optional scalar fields from YAML example
+        # Note: miappe_version is auto-populated and readonly, so we skip it
         fill_field(browser, "input-description", INV_EXAMPLE["description"])
         fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
         fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
         fill_field(browser, "input-license", INV_EXAMPLE["license"])
-        fill_field(browser, "input-miappe-version", INV_EXAMPLE["miappe_version"])
 
         # Fill associated_publications (textarea, one per line)
         pubs = INV_EXAMPLE.get("associated_publications", [])
@@ -730,6 +730,138 @@ class TestCreateInvestigationAllFields:
 
         sidebar = browser.find_element(By.ID, "sidebar")
         assert INV_EXAMPLE["title"] in sidebar.text
+
+
+@pytest.mark.ui
+class TestAutoPopulatedFields:
+    """Test auto-populated fields like miappe_version."""
+
+    def test_miappe_version_auto_populated(self, browser):
+        """Verify miappe_version is auto-populated and readonly."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        click_button(browser, "btn-create-Investigation")
+
+        # Expand optional fields to see miappe_version
+        expand_optional_fields(browser)
+
+        # Find miappe_version input
+        version_input = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-miappe-version']"
+        )
+
+        # Verify it has a value (auto-populated)
+        assert version_input.get_attribute("value") == "1.1", (
+            f"Expected miappe_version to be '1.1', got: {version_input.get_attribute('value')}"
+        )
+
+        # Verify it is readonly
+        assert version_input.get_attribute("readonly") is not None, (
+            "miappe_version field should be readonly"
+        )
+
+        # Verify it has the readonly class
+        assert "form-input-readonly" in version_input.get_attribute("class"), (
+            "miappe_version field should have form-input-readonly class"
+        )
+
+    def test_date_format_iso8601(self, browser):
+        """Verify date fields use ISO 8601 format (YYYY-MM-DD)."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        click_button(browser, "btn-create-Investigation")
+
+        # Expand optional fields to see date fields
+        expand_optional_fields(browser)
+
+        # Find a date input
+        date_input = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='input-submission-date']"
+        )
+
+        # Verify it uses text type with pattern
+        assert date_input.get_attribute("type") == "text", (
+            "Date field should be type='text' for consistent formatting"
+        )
+
+        pattern = date_input.get_attribute("pattern")
+        assert pattern == r"\d{4}-\d{2}-\d{2}", (
+            f"Date field should have ISO 8601 pattern, got: {pattern}"
+        )
+
+        placeholder = date_input.get_attribute("placeholder")
+        assert placeholder == "YYYY-MM-DD", (
+            f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
+        )
+
+    def test_table_cell_invalid_latitude_highlighted(self, browser):
+        """Verify invalid latitude values get highlighted in table cells."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation first
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "lat-test-inv")
+        fill_field(browser, "input-title", "Latitude Test Investigation")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Refresh and select the created investigation
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Latitude Test Investigation" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Add a study
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        # Fill required study fields
+        fill_field(browser, "cell-0-unique_id", "lat-test-study", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Latitude Test Study", trigger_change=True)
+
+        # Enter invalid latitude (43333 is way out of range, valid is -90 to 90)
+        lat_input = browser.find_element(
+            By.CSS_SELECTOR, "[data-testid='cell-0-latitude']"
+        )
+        lat_input.clear()
+        lat_input.send_keys("43333")
+        # Trigger input event to invoke validation
+        browser.execute_script(
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+            lat_input
+        )
+        time.sleep(0.5)
+
+        # Verify the input has the 'invalid' class (red background)
+        classes = lat_input.get_attribute("class")
+        assert "invalid" in classes, (
+            f"Invalid latitude should be highlighted. Classes: {classes}"
+        )
+
+        # Now enter a valid latitude
+        lat_input.clear()
+        lat_input.send_keys("52.5")
+        browser.execute_script(
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
+            lat_input
+        )
+        time.sleep(0.5)
+
+        # Verify the 'invalid' class is removed
+        classes = lat_input.get_attribute("class")
+        assert "invalid" not in classes, (
+            f"Valid latitude should not be highlighted. Classes: {classes}"
+        )
 
 
 @pytest.mark.ui
@@ -1308,7 +1440,7 @@ class TestCreateAllEntityTypes:
         fill_field(browser, "input-submission-date", INV_EXAMPLE["submission_date"])
         fill_field(browser, "input-public-release-date", INV_EXAMPLE["public_release_date"])
         fill_field(browser, "input-license", INV_EXAMPLE["license"])
-        fill_field(browser, "input-miappe-version", INV_EXAMPLE["miappe_version"])
+        # Note: miappe_version is auto-populated and readonly, so we skip it
 
         pubs = INV_EXAMPLE.get("associated_publications", [])
         if pubs:
@@ -1450,3 +1582,140 @@ class TestCreateAllEntityTypes:
         # All 10 entity types were successfully created:
         # Investigation, Person, Study, DataFile, BiologicalMaterial, ObservationUnit,
         # ObservedVariable, Factor, Event, Environment
+
+
+@pytest.mark.ui
+class TestExcelExport:
+    """Test Excel export functionality."""
+
+    def test_export_button_visible_in_edit_mode(self, browser):
+        """Export button should be visible when editing an entity."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create an Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-EXPORT-001")
+        fill_field(browser, "input-title", "Export Test Investigation")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity to enter edit mode
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Export Test Investigation" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Verify export button is visible in edit mode
+        assert element_exists(browser, "btn-export")
+
+    def test_export_button_not_in_create_mode(self, browser):
+        """Export button should not be visible when creating a new entity."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Open new Investigation form
+        click_button(browser, "btn-create-Investigation")
+
+        # Verify export button is NOT visible in create mode
+        assert not element_exists(browser, "btn-export")
+
+    def test_export_downloads_file(self, browser):
+        """Click export button and verify it triggers download."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create an Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
+        fill_field(browser, "input-title", INV_EXAMPLE["title"])
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if INV_EXAMPLE["title"] in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Get export button href
+        export_btn = browser.find_element(By.CSS_SELECTOR, "[data-testid='btn-export']")
+        export_url = export_btn.get_attribute("href")
+
+        # Verify export URL is correct
+        assert "/export" in export_url
+
+        # Test export endpoint directly using requests
+        import urllib.request
+
+        req = urllib.request.Request(f"{BASE_URL}/export")
+        response = urllib.request.urlopen(req, timeout=10)
+
+        # Verify response headers
+        content_type = response.headers.get("Content-Type")
+        assert "spreadsheetml" in content_type or "excel" in content_type.lower()
+
+        content_disp = response.headers.get("Content-Disposition")
+        assert "attachment" in content_disp
+        assert ".xlsx" in content_disp
+
+        # Verify content is valid Excel (starts with PK for ZIP format)
+        content = response.read()
+        assert content[:2] == b"PK"  # Excel files are ZIP archives
+
+    def test_export_contains_investigation_data(self, browser):
+        """Verify exported Excel contains Investigation data."""
+        from openpyxl import load_workbook
+
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation with specific data
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-EXPORT-DATA-001")
+        fill_field(browser, "input-title", "Export Data Test")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Download export
+        import urllib.request
+        from io import BytesIO
+
+        req = urllib.request.Request(f"{BASE_URL}/export")
+        response = urllib.request.urlopen(req, timeout=10)
+        content = response.read()
+
+        # Load workbook and verify content
+        wb = load_workbook(BytesIO(content))
+
+        # Verify Investigation sheet exists
+        assert "Investigation" in wb.sheetnames
+
+        # Verify data is in the sheet
+        ws = wb["Investigation"]
+        rows = list(ws.values)
+        headers = rows[0]
+        data_rows = rows[1:]
+
+        # Verify headers include key fields
+        assert "unique_id" in headers
+        assert "title" in headers
+
+        # Verify at least one data row with our values
+        found = False
+        for row in data_rows:
+            row_dict = dict(zip(headers, row, strict=False))
+            if row_dict.get("unique_id") == "INV-EXPORT-DATA-001":
+                found = True
+                assert row_dict.get("title") == "Export Data Test"
+                break
+
+        assert found, "Investigation data not found in export"
