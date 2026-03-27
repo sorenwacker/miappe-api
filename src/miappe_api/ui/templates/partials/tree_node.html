@@ -1,5 +1,9 @@
-<div class="tree-node {% if node.id == editing_node_id %}selected{% endif %}"
+<div class="tree-node {% if node.id == editing_node_id %}selected{% endif %}{% if node.is_nested %} tree-node-nested{% endif %}"
+     {% if node.is_nested %}
+     hx-get="/nested/{{ node.parent_entity_type }}/{{ node.field_name }}/{{ node.idx }}"
+     {% else %}
      hx-get="/form/{{ node.entity_type }}/{{ node.id }}"
+     {% endif %}
      hx-target="#main"
      hx-swap="innerHTML"
      data-testid="tree-node-{{ node.id }}">
@@ -10,6 +14,7 @@
         <div class="tree-node-label">{{ node.label }}</div>
         <div class="tree-node-type">{{ node.entity_type }}</div>
     </div>
+    {% if not node.is_nested %}
     <button class="btn-icon danger tree-node-delete"
             hx-delete="/entity/{{ node.id }}"
             hx-target="#sidebar"
@@ -19,6 +24,7 @@
             data-testid="btn-delete-{{ node.id }}">
         &#128465;
     </button>
+    {% endif %}
 </div>
 
 {% if node.children %}

@@ -141,6 +141,16 @@ body {
     opacity: 1;
 }
 
+.tree-node-nested {
+    font-size: 0.9em;
+}
+
+.tree-children {
+    margin-left: 1rem;
+    border-left: 1px solid #e5e7eb;
+    padding-left: 0.5rem;
+}
+
 .tree-children {
     margin-left: 1rem;
 }

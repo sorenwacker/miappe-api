@@ -171,8 +171,83 @@ class AppState:
         return True
 
     def get_tree_data(self) -> list[dict]:
-        """Get tree data for template rendering."""
-        return [n.to_dict() for n in self.entity_tree]
+        """Get tree data for template rendering, including nested entities."""
+        facade = self.get_or_create_facade()
+
+        def extract_nested_children(data: dict, entity_type: str) -> list[dict]:
+            """Extract nested entities as tree children."""
+            children = []
+            helper = getattr(facade, entity_type, None)
+            if not helper:
+                return children
+
+            for field_name, nested_type in helper.nested_fields.items():
+                nested_items = data.get(field_name, [])
+                if not nested_items or not isinstance(nested_items, list):
+                    continue
+
+                for i, item in enumerate(nested_items):
+                    if hasattr(item, "model_dump"):
+                        item_data = item.model_dump(exclude_none=True)
+                    elif isinstance(item, dict):
+                        item_data = item
+                    else:
+                        continue
+
+                    # Get label for nested item
+                    nested_helper = getattr(facade, nested_type, None)
+                    label = None
+                    if nested_helper:
+                        for field in ["title", "name", "unique_id", "identifier"]:
+                            if field in item_data and item_data[field]:
+                                label = str(item_data[field])
+                                break
+                    if not label:
+                        label = f"{nested_type} {i + 1}"
+
+                    child = {
+                        "id": f"{field_name}_{i}",
+                        "entity_type": nested_type,
+                        "label": label,
+                        "field_name": field_name,
+                        "idx": i,
+                        "parent_entity_type": entity_type,
+                        "is_nested": True,
+                        "has_children": False,
+                        "children": [],
+                    }
+
+                    # Recursively get nested children
+                    nested_children = extract_nested_children(item_data, nested_type)
+                    if nested_children:
+                        child["has_children"] = True
+                        child["children"] = nested_children
+
+                    children.append(child)
+
+            return children
+
+        def node_to_dict_with_nested(node: TreeNode) -> dict:
+            """Convert node to dict including nested entities as children."""
+            result = {
+                "id": node.id,
+                "entity_type": node.entity_type,
+                "label": node.label,
+                "has_children": False,
+                "children": [],
+            }
+
+            # Get nested children from instance data
+            if node.instance and hasattr(node.instance, "model_dump"):
+                data = node.instance.model_dump(exclude_none=True)
+                nested_children = extract_nested_children(data, node.entity_type)
+                if nested_children:
+                    result["has_children"] = True
+                    result["children"] = nested_children
+
+            return result
+
+        return [node_to_dict_with_nested(n) for n in self.entity_tree]
 
 
 def create_app(state: AppState | None = None) -> FastAPI:
