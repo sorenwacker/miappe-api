@@ -25,11 +25,16 @@ markdown_extensions:
   - admonition
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - toc:
       permalink: true
+  - tables
 
 nav:
   - Home: index.md
@@ -38,6 +43,7 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Architecture:
       - Overview: architecture/overview.md
+      - ISA vs MIAPPE: architecture/isa-miappe-comparison.md
       - Schema Specs: architecture/schema-specs.md
       - Model Factory: architecture/model-factory.md
   - API Reference:
