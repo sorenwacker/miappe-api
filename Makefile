@@ -1,4 +1,4 @@
-.PHONY: install dev test test-ui test-cov lint format docs docs-serve ui clean help
+.PHONY: install dev test test-ui test-cov demo lint format docs docs-serve ui clean help
 
 help:
 	@echo "Available targets:"
@@ -7,6 +7,7 @@ help:
 	@echo "  test       - Run tests (excluding UI tests)"
 	@echo "  test-ui    - Run UI tests (requires Chrome)"
 	@echo "  test-cov   - Run tests with coverage"
+	@echo "  demo       - Run demo test creating all MIAPPE entities (visible browser)"
 	@echo "  lint       - Run linter"
 	@echo "  format     - Format code"
 	@echo "  docs       - Build documentation"
@@ -29,6 +30,9 @@ test-ui:
 
 test-cov:
 	uv run pytest --cov --cov-report=term-missing
+
+demo:
+	uv run pytest tests/test_ui/test_selenium.py::TestCreateAllEntityTypes::test_create_all_entities -v
 
 lint:
 	uv run ruff check src tests
