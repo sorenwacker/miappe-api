@@ -2,60 +2,28 @@
     {% for col in columns %}
     <td>
         {% set col_type = column_types.get(col, 'string') if column_types else 'string' %}
-        {% if col_type == 'date' %}
+        {% set constraints = column_constraints.get(col, {}) if column_constraints else {} %}
         <input type="text"
                class="form-input"
                name="{{ col }}"
                value="{{ row.get(col, '') }}"
+               {% if col_type == 'date' %}
                pattern="\d{4}-\d{2}-\d{2}"
                placeholder="YYYY-MM-DD"
                title="Date format: YYYY-MM-DD"
-               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
+               {% elif constraints.get('pattern') %}
+               pattern="{{ constraints.pattern }}"
+               {% endif %}
+               {% if constraints.get('min_length') %}data-minlength="{{ constraints.min_length }}"{% endif %}
+               {% if constraints.get('max_length') %}data-maxlength="{{ constraints.max_length }}"{% endif %}
+               {% if constraints.get('minimum') is not none %}data-min="{{ constraints.minimum }}"{% endif %}
+               {% if constraints.get('maximum') is not none %}data-max="{{ constraints.maximum }}"{% endif %}
+               hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}/cell"
                hx-trigger="change"
                hx-swap="none"
                data-field="{{ col }}"
-               data-type="date"
+               data-type="{{ col_type }}"
                data-testid="cell-{{ row._idx }}-{{ col }}">
-        {% elif col_type == 'float' %}
-        <input type="text"
-               class="form-input"
-               name="{{ col }}"
-               value="{{ row.get(col, '') }}"
-               pattern="-?\d*\.?\d*"
-               title="Numeric value (e.g., 52.5 or -3.14)"
-               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
-               hx-trigger="change"
-               hx-swap="none"
-               data-field="{{ col }}"
-               data-type="float"
-               data-testid="cell-{{ row._idx }}-{{ col }}">
-        {% elif col_type == 'integer' %}
-        <input type="text"
-               class="form-input"
-               name="{{ col }}"
-               value="{{ row.get(col, '') }}"
-               pattern="-?\d*"
-               title="Integer value"
-               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
-               hx-trigger="change"
-               hx-swap="none"
-               data-field="{{ col }}"
-               data-type="integer"
-               data-testid="cell-{{ row._idx }}-{{ col }}">
-        {% else %}
-        {% set pattern = column_patterns.get(col) if column_patterns else none %}
-        <input type="text"
-               class="form-input"
-               name="{{ col }}"
-               value="{{ row.get(col, '') }}"
-               {% if pattern %}pattern="{{ pattern }}"{% endif %}
-               hx-post="/table/{{ field_name }}/row/{{ row._idx }}/cell"
-               hx-trigger="change"
-               hx-swap="none"
-               data-field="{{ col }}"
-               data-type="string"
-               data-testid="cell-{{ row._idx }}-{{ col }}">
-        {% endif %}
     </td>
     {% endfor %}
     <td class="row-actions">
@@ -68,7 +36,7 @@
             Edit
         </button>
         <button class="btn-icon danger"
-                hx-delete="/table/{{ field_name }}/row/{{ row._idx }}"
+                hx-delete="/table/{{ parent_entity_type }}/{{ field_name }}/row/{{ row._idx }}"
                 hx-target="#row-{{ row._idx }}"
                 hx-swap="delete"
                 title="Delete row"

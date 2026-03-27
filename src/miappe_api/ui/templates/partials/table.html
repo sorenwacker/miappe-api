@@ -2,11 +2,20 @@
     {% if breadcrumb %}
     <nav class="breadcrumb" data-testid="breadcrumb">
         {% for item in breadcrumb %}
+        {% if not loop.first %}<span class="breadcrumb-sep">&gt;</span>{% endif %}
+        {% if item.url %}
+        <span class="breadcrumb-item">
+            <a href="#"
+               hx-get="{{ item.url }}"
+               hx-target="#main"
+               hx-swap="innerHTML">{{ item.label }}</a>
+        </span>
+        {% else %}
         <span class="breadcrumb-item">{{ item.label }}</span>
-        {% if not loop.last %}<span class="breadcrumb-sep">&gt;</span>{% endif %}
+        {% endif %}
         {% endfor %}
         <span class="breadcrumb-sep">&gt;</span>
-        <span class="breadcrumb-item">{{ field_name }}</span>
+        <span class="breadcrumb-item active">{{ field_name }}</span>
     </nav>
     {% endif %}
 
@@ -28,23 +37,30 @@
                 data-testid="table-add-row">
             + Add Row
         </button>
+        <button class="btn btn-secondary btn-sm"
+                hx-get="/table/{{ parent_entity_type }}/{{ field_name }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="table-refresh">
+            Save
+        </button>
         {% if nested_context %}
         {# We're in a nested context - go back to the nested form #}
-        <button class="btn btn-primary"
+        <button class="btn btn-secondary btn-sm"
                 hx-get="/nested/{{ nested_context.parent_entity_type }}/{{ nested_context.field_name }}/{{ nested_context.row_idx }}?resume=true"
                 hx-target="#main"
                 hx-swap="innerHTML"
-                data-testid="table-save">
-            Save & Back
+                data-testid="table-back">
+            Back
         </button>
         {% else %}
         {# Root level - go back to the main form #}
-        <button class="btn btn-primary"
+        <button class="btn btn-secondary btn-sm"
                 hx-get="/form/{{ parent_entity_type }}/{{ editing_node_id }}"
                 hx-target="#main"
                 hx-swap="innerHTML"
-                data-testid="table-save">
-            Save & Back
+                data-testid="table-back">
+            Back
         </button>
         {% endif %}
     </div>

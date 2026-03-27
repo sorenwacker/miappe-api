@@ -1,10 +1,10 @@
-// Minimal JavaScript for HTMX UI
+// MIAPPE-API JavaScript
 
 // Handle collapsible sections
 document.addEventListener('click', function(e) {
-    const header = e.target.closest('.collapsible-header');
+    var header = e.target.closest('.collapsible-header');
     if (header) {
-        const collapsible = header.closest('.collapsible');
+        var collapsible = header.closest('.collapsible');
         collapsible.classList.toggle('open');
     }
 });
@@ -12,7 +12,7 @@ document.addEventListener('click', function(e) {
 // Handle profile select change
 document.addEventListener('change', function(e) {
     if (e.target.id === 'profile-select') {
-        const profile = e.target.value;
+        var profile = e.target.value;
         window.location.href = '/profile/' + profile;
     }
 });
@@ -20,7 +20,7 @@ document.addEventListener('change', function(e) {
 // Auto-dismiss notifications after 5 seconds
 document.addEventListener('htmx:afterSwap', function(e) {
     if (e.target.id === 'notification-container') {
-        const notifications = e.target.querySelectorAll('.notification');
+        var notifications = e.target.querySelectorAll('.notification');
         notifications.forEach(function(notification) {
             setTimeout(function() {
                 notification.style.opacity = '0';
@@ -37,103 +37,117 @@ function confirmDelete(nodeId, nodeLabel) {
     return confirm('Delete "' + nodeLabel + '"?');
 }
 
-// Field validation rules for specific fields
-var fieldValidators = {
-    // Email validation
-    'email': function(value) {
-        if (!value) return true;
-        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value);
-    },
-    // Geographic coordinates (used in Study and other entities)
-    'latitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -90 && num <= 90;
-    },
-    'longitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -180 && num <= 180;
-    },
-    'altitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -500 && num <= 10000;
-    },
-    // BiologicalMaterial coordinates
-    'biological_material_latitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -90 && num <= 90;
-    },
-    'biological_material_longitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -180 && num <= 180;
-    },
-    'biological_material_altitude': function(value) {
-        if (!value) return true;
-        var num = parseFloat(value);
-        return !isNaN(num) && num >= -500 && num <= 10000;
-    }
-};
-
-// Type-based validation
-function validateByType(value, type) {
-    if (!value) return true;
-    switch (type) {
-        case 'integer':
-            return /^-?\d+$/.test(value);
-        case 'float':
-            return /^-?\d*\.?\d+$/.test(value);
-        case 'date':
-            return /^\d{4}-\d{2}-\d{2}$/.test(value);
-        default:
-            return true;
-    }
-}
-
-// Validate table cell input
-function validateTableCell(input) {
-    var fieldName = input.getAttribute('data-field') || input.getAttribute('name');
-    var dataType = input.getAttribute('data-type') || 'string';
+// Unified validation based on data-type and constraint attributes
+function validateInput(input) {
     var value = input.value;
+    var dataType = input.getAttribute('data-type') || 'string';
     var isValid = true;
+    var errorMsg = '';
 
-    // Check field-specific validators first
-    if (fieldValidators[fieldName]) {
-        isValid = fieldValidators[fieldName](value);
-    } else {
-        // Fall back to type-based validation
-        isValid = validateByType(value, dataType);
+    // Empty values are valid (required check is separate)
+    if (!value) {
+        input.classList.remove('invalid');
+        input.removeAttribute('title');
+        return true;
+    }
+
+    // Type-based validation
+    switch (dataType) {
+        case 'integer':
+            if (!/^-?\d+$/.test(value)) {
+                isValid = false;
+                errorMsg = 'Must be a whole number';
+            }
+            break;
+        case 'float':
+            if (!/^-?\d*\.?\d+$/.test(value)) {
+                isValid = false;
+                errorMsg = 'Must be a number';
+            }
+            break;
+        case 'date':
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                isValid = false;
+                errorMsg = 'Date format: YYYY-MM-DD';
+            }
+            break;
+        case 'uri':
+            try {
+                new URL(value);
+            } catch (_) {
+                isValid = false;
+                errorMsg = 'Must be a valid URL';
+            }
+            break;
+    }
+
+    // Constraint-based validation (only if type validation passed)
+    if (isValid) {
+        // Min/max for numbers
+        var min = input.getAttribute('data-min');
+        var max = input.getAttribute('data-max');
+        if (min !== null && (dataType === 'integer' || dataType === 'float')) {
+            var num = parseFloat(value);
+            if (num < parseFloat(min)) {
+                isValid = false;
+                errorMsg = 'Minimum value: ' + min;
+            }
+        }
+        if (max !== null && (dataType === 'integer' || dataType === 'float')) {
+            var num = parseFloat(value);
+            if (num > parseFloat(max)) {
+                isValid = false;
+                errorMsg = 'Maximum value: ' + max;
+            }
+        }
+
+        // Min/max length for strings
+        var minLen = input.getAttribute('data-minlength');
+        var maxLen = input.getAttribute('data-maxlength');
+        if (minLen !== null && value.length < parseInt(minLen)) {
+            isValid = false;
+            errorMsg = 'Minimum length: ' + minLen;
+        }
+        if (maxLen !== null && value.length > parseInt(maxLen)) {
+            isValid = false;
+            errorMsg = 'Maximum length: ' + maxLen;
+        }
+
+        // Pattern validation (HTML5 pattern attribute)
+        var pattern = input.getAttribute('pattern');
+        if (pattern && !new RegExp('^' + pattern + '$').test(value)) {
+            isValid = false;
+            errorMsg = input.getAttribute('title') || 'Invalid format';
+        }
     }
 
     // Update visual state
     if (isValid) {
         input.classList.remove('invalid');
+        input.removeAttribute('title');
     } else {
         input.classList.add('invalid');
+        if (errorMsg) {
+            input.setAttribute('title', errorMsg);
+        }
     }
 
     return isValid;
 }
 
-// Validate all table cells on input change
+// Validate all form inputs on change
 document.addEventListener('input', function(e) {
     if (e.target.classList.contains('form-input')) {
-        validateTableCell(e.target);
+        validateInput(e.target);
     }
 });
 
-// Validate all cells after HTMX swap (for newly added rows)
+// Validate all inputs after HTMX swap (for newly added rows)
 document.addEventListener('htmx:afterSwap', function(e) {
-    var table = e.target.closest('.data-table');
-    if (table) {
-        var inputs = table.querySelectorAll('.form-input');
-        inputs.forEach(function(input) {
-            if (input.value) {
-                validateTableCell(input);
-            }
-        });
-    }
+    var inputs = e.target.querySelectorAll('.form-input');
+    inputs.forEach(function(input) {
+        if (input.value) {
+            validateInput(input);
+        }
+    });
 });
