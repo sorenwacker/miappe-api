@@ -5,14 +5,17 @@ MIAPPE-API uses pytest for testing with a multi-layered approach covering unit t
 ## Running Tests
 
 ```bash
-# Run all tests (excluding UI tests)
-make test
+# Run all tests
+uv run pytest
 
 # Run tests with coverage
-make test-cov
+uv run pytest --cov=miappe_api
 
-# Run UI tests (NiceGUI native tests)
-make test-ui
+# Run only UI tests
+uv run pytest tests/test_ui/ -v
+
+# Run Selenium tests (visible browser)
+uv run pytest tests/test_ui/test_selenium.py -v
 ```
 
 ## Test Structure
@@ -27,10 +30,8 @@ tests/
 ├── test_storage/       # JSON/YAML storage tests
 ├── test_validators/    # Validation rule tests
 ├── test_ui/            # UI tests
-│   ├── test_nicegui.py # NiceGUI native tests (primary)
-│   ├── test_selenium.py # Selenium E2E tests (fallback)
-│   ├── conftest.py     # UI test fixtures
-│   └── main_test.py    # NiceGUI test entry point
+│   ├── test_htmx.py    # HTMX route tests (FastAPI TestClient)
+│   └── test_selenium.py # Selenium E2E tests (visible browser)
 └── test_version.py
 ```
 
@@ -51,140 +52,160 @@ Integration tests verify component interactions:
 - **API**: Test REST endpoints with TestClient
 - **Facade**: Test entity creation through the facade pattern
 
-## E2E UI Tests
+## UI Tests
 
-### NiceGUI Native Tests (Recommended)
+The UI is built with HTMX + FastAPI + Jinja2 templates. Two test approaches are used:
 
-NiceGUI provides a built-in testing framework that simulates user interactions in Python without requiring a browser. This is faster and more reliable than Selenium.
+### HTMX Route Tests (TestClient)
 
-#### Test Configuration
-
-Tests use NiceGUI's `user_plugin` fixture:
+Fast, headless tests using FastAPI's TestClient to verify route behavior and HTML responses.
 
 ```python
-from nicegui import ui
-from nicegui.testing import User
+from fastapi.testclient import TestClient
+from miappe_api.ui.routes import AppState, create_app
 
-pytest_plugins = ["nicegui.testing.user_plugin"]
-
-async def test_page_loads(user: User, app) -> None:
-    await user.open("/")
-    await user.should_see("MIAPPE-API")
+def test_create_entity(client):
+    response = client.post(
+        "/entity",
+        data={
+            "_entity_type": "Investigation",
+            "unique_id": "INV-001",
+            "title": "Test Investigation",
+        },
+    )
+    assert response.status_code == 200
+    assert "Created Investigation" in response.text
 ```
 
-#### Element Markers
+### Selenium E2E Tests (Visible Browser)
 
-Input elements are marked for easy selection:
-
-```python
-# In app.py - add markers to inputs
-ui.input(label="title").mark("title")
-
-# In tests - find by marker
-title_input = user.find(kind=ui.input, marker="title")
-title_input.type("My Title")
-```
-
-#### Test Patterns
-
-```python
-async def test_create_investigation(user: User, app) -> None:
-    _ = app  # Ensure app fixture is loaded
-    await user.open("/")
-
-    # Click button by text content
-    user.find("+ Investigation").click()
-
-    # Fill form fields by marker
-    user.find(kind=ui.input, marker="unique_id").type("INV-001")
-    title_input = user.find(kind=ui.input, marker="title")
-    title_input.type("Test Investigation")
-
-    # Click create
-    user.find("Create").click()
-
-    # Assert results
-    await user.should_see("Test Investigation")
-    await user.should_not_see("No entities created")
-```
-
-### Selenium Tests (Alternative)
-
-For testing browser-specific behaviors, Selenium tests are available.
+End-to-end tests with a visible Chrome browser for demonstrating and verifying UI interactions.
 
 #### Prerequisites
 
 - Chrome browser installed
-- ChromeDriver (automatically managed by webdriver-manager)
+- ChromeDriver (managed by selenium)
+
+#### Running Selenium Tests
+
+```bash
+# Run all Selenium tests
+uv run pytest tests/test_ui/test_selenium.py -v
+
+# Stop on first failure
+uv run pytest tests/test_ui/test_selenium.py -v -x --tb=short
+```
+
+#### Test Configuration
+
+Tests use a module-scoped server fixture that starts uvicorn on port 8081:
+
+```python
+@pytest.fixture(scope="module")
+def server():
+    """Start the MIAPPE-API server for testing."""
+    proc = subprocess.Popen(
+        ["uv", "run", "uvicorn", "miappe_api.ui.routes:app", "--port", "8081"],
+        ...
+    )
+    # Wait for server to be ready
+    yield proc
+    proc.terminate()
+
+@pytest.fixture
+def browser(_server):
+    """Create a visible Chrome browser for testing."""
+    options = Options()
+    options.add_argument("--window-size=1280,900")
+    driver = webdriver.Chrome(options=options)
+    yield driver
+    driver.quit()
+```
 
 #### Test ID Convention
 
-All interactive UI elements have `data-testid` attributes for reliable Selenium selection:
+All interactive UI elements have `data-testid` attributes for reliable selection:
 
-| Pattern | Description | Example |
-|---------|-------------|---------|
-| `select-profile` | Profile dropdown | `[data-testid='select-profile']` |
-| `btn-new-{entity}` | New entity button | `[data-testid='btn-new-investigation']` |
-| `btn-create-{entity}` | Form create button | `[data-testid='btn-create-investigation']` |
-| `btn-save-{entity}` | Nested form save | `[data-testid='btn-save-study']` |
-| `btn-clear-{entity}` | Form clear button | `[data-testid='btn-clear-investigation']` |
-| `btn-cancel-{entity}` | Dialog cancel | `[data-testid='btn-cancel-study']` |
-| `btn-add-{entity}` | Add nested entity | `[data-testid='btn-add-study']` |
-| `btn-add-child-{entity}` | Add child entity | `[data-testid='btn-add-child-study']` |
-| `btn-explore-{entity}` | Explore entity type | `[data-testid='btn-explore-study']` |
-| `btn-set-{entity}` | Set single reference | `[data-testid='btn-set-location']` |
-| `input-{field}` | Form input field | `[data-testid='input-unique-id']` |
-| `tree-node-{id}` | Tree node | `[data-testid='tree-node-abc123']` |
+| Element | Pattern | Example |
+|---------|---------|---------|
+| Create entity button | `btn-create-{EntityType}` | `btn-create-Investigation` |
+| Tree node | `tree-node-{node_id}` | `tree-node-abc123` |
+| Delete node button | `btn-delete-{node_id}` | `btn-delete-abc123` |
+| Entity form | `form-entity` | `form-entity` |
+| Input field | `input-{field-name}` | `input-unique-id` |
+| Create button | `btn-create` | `btn-create` |
+| Update button | `btn-update` | `btn-update` |
+| Optional fields toggle | `section-optional-toggle` | `section-optional-toggle` |
+| Nested field button | `btn-nested-{field-name}` | `btn-nested-contacts` |
+| Table add row | `table-add-row` | `table-add-row` |
+| Table save | `table-save` | `table-save` |
+| Table count | `table-count` | `table-count` |
+| Table cell | `cell-{row}-{column}` | `cell-0-name` |
+| Notification | `notification` | `notification` |
 
-#### Writing Selenium Tests
+#### Helper Functions
+
+The test file provides helper functions for common operations:
 
 ```python
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+def fill_field(driver, testid: str, value: str, trigger_change: bool = False):
+    """Fill a form field by data-testid."""
 
-def test_create_entity(driver, app_server):
-    driver.get("http://127.0.0.1:8099")
+def click_button(driver, testid: str):
+    """Click a button by data-testid and wait."""
 
-    # Click new entity button
-    btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='btn-new-investigation']")
-    btn.click()
+def element_exists(driver, testid: str) -> bool:
+    """Check if an element with given data-testid exists."""
 
-    # Fill form field (note: input is nested inside NiceGUI component)
-    container = driver.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
-    input_field = container.find_element(By.TAG_NAME, "input")
-    input_field.send_keys("INV-001")
-
-    # Submit
-    create_btn = driver.find_element(By.CSS_SELECTOR, "[data-testid='btn-create-investigation']")
-    create_btn.click()
-
-    # Wait for result
-    WebDriverWait(driver, 10).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, "[data-testid^='tree-node-']"))
-    )
+def expand_optional_fields(driver):
+    """Expand the optional fields section if collapsed."""
 ```
 
-### Debugging UI Tests
-
-For NiceGUI tests, failed assertions print the full DOM tree.
-
-For Selenium tests, take screenshots on failure:
+#### Example Test
 
 ```python
-def test_something(driver):
-    try:
-        # test code
-    except Exception:
-        driver.save_screenshot("debug_screenshot.png")
-        raise
+@pytest.mark.ui
+class TestCreateInvestigation:
+    def test_create_investigation(self, browser):
+        browser.get("http://127.0.0.1:8081")
+
+        # Click create button
+        click_button(browser, "btn-create-Investigation")
+
+        # Fill required fields
+        fill_field(browser, "input-unique-id", "INV-001")
+        fill_field(browser, "input-title", "Test Investigation")
+
+        # Submit
+        click_button(browser, "btn-create")
+
+        # Verify entity appears in sidebar
+        sidebar = browser.find_element(By.ID, "sidebar")
+        assert "Test Investigation" in sidebar.text
+```
+
+#### Date Input Handling
+
+For date inputs, JavaScript is used to set values directly (avoids locale-specific formatting issues):
+
+```python
+if element.get_attribute("type") == "date":
+    driver.execute_script("arguments[0].value = arguments[1]", element, "2024-03-15")
+```
+
+#### Triggering HTMX Events
+
+When filling table cells that have HTMX handlers, trigger the change event:
+
+```python
+fill_field(browser, "cell-0-name", "Dr. Smith", trigger_change=True)
 ```
 
 ## Markers
 
 Tests are marked for selective execution:
 
-- `@pytest.mark.ui` - UI tests (both NiceGUI and Selenium)
+- `@pytest.mark.ui` - UI tests (Selenium)
 
 Run specific markers:
 
