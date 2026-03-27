@@ -45,8 +45,8 @@ class DateRangeRule(ValidationRule):
         start = data.get(self.start_field)
         end = data.get(self.end_field)
 
-        # Skip if either date is missing
-        if start is None or end is None:
+        # Skip if either date is missing or empty
+        if not start or not end:
             return []
 
         # Convert strings to dates if needed
