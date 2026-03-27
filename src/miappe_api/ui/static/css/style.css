@@ -83,6 +83,10 @@ body {
     background: white;
 }
 
+.main > .card {
+    max-width: 800px;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
