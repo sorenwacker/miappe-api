@@ -442,6 +442,7 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "columns": columns,
                 "rows": rows,
                 "parent_entity_type": entity_type,
+                "editing_node_id": state.editing_node_id,
             },
         )
 
@@ -454,7 +455,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
             state.current_nested_items[field_name] = []
 
         form_data = await request.form()
-        columns = [k for k in form_data if not k.startswith("_")]
+        # Extract column names from _col_* hidden inputs
+        columns = [form_data[k] for k in form_data if k.startswith("_col_")]
 
         new_row = dict.fromkeys(columns, "")
         new_row["_idx"] = len(state.current_nested_items[field_name])
@@ -482,6 +484,23 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 for i, item in enumerate(items):
                     if isinstance(item, dict):
                         item["_idx"] = i
+
+        return HTMLResponse(content="")
+
+    @app.post("/table/{field_name}/row/{idx}/cell", response_class=HTMLResponse)
+    async def update_table_cell(request: Request, field_name: str, idx: int):
+        """Update a cell value in the nested table."""
+        state = get_state()
+
+        if field_name in state.current_nested_items:
+            items = state.current_nested_items[field_name]
+            if 0 <= idx < len(items):
+                form_data = await request.form()
+                item = items[idx]
+                if isinstance(item, dict):
+                    for key, value in form_data.items():
+                        if not key.startswith("_"):
+                            item[key] = value
 
         return HTMLResponse(content="")
 

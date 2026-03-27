@@ -2,7 +2,7 @@
     <div class="table-header">
         <div>
             <button class="btn btn-secondary btn-sm"
-                    hx-get="/form/{{ parent_entity_type }}"
+                    hx-get="/form/{{ parent_entity_type }}{% if editing_node_id %}/{{ editing_node_id }}{% endif %}"
                     hx-target="#main"
                     hx-swap="innerHTML"
                     data-testid="table-back">
