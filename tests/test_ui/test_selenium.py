@@ -73,6 +73,16 @@ def browser(server):  # noqa: ARG001
 
     driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(5)
+
+    # Reset server state before each test
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(f"{BASE_URL}/reset", method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception:
+        pass  # Ignore errors if server not ready
+
     yield driver
     driver.quit()
 
@@ -549,3 +559,188 @@ class TestProfileSwitch:
         # Verify miappe is selected but state was cleared
         sidebar = browser.find_element(By.ID, "sidebar")
         assert "No entities created yet" in sidebar.text
+
+
+@pytest.mark.ui
+class TestNestedEntityEditing:
+    """Test editing nested entities by clicking on table rows."""
+
+    def test_edit_nested_study(self, browser):
+        """Click a Study row in table to open edit form for that Study."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation with a Study
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-NESTED-001")
+        fill_field(browser, "input-title", "Investigation for Nested Edit")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Investigation for Nested Edit" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Expand optional fields
+        expand_optional_fields(browser)
+
+        # Click on studies nested field button
+        click_button(browser, "btn-nested-studies")
+
+        # Add a Study row
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_field(browser, "cell-0-unique_id", "STU-NESTED-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Study for Nested Edit", trigger_change=True)
+
+        # Save the Study first to ensure it's persisted
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Go back to Studies table
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the Study row to edit it
+        click_element(browser, "row-0")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're now in Study edit form
+        # Should show Study-specific fields
+        assert element_exists(browser, "form-entity")
+
+        # Verify breadcrumb shows navigation path
+        assert element_exists(browser, "breadcrumb")
+        breadcrumb = browser.find_element(By.CSS_SELECTOR, "[data-testid='breadcrumb']")
+        assert "Investigation" in breadcrumb.text
+        assert "studies" in breadcrumb.text
+
+        # Verify the Study form has the correct values
+        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        assert unique_id_field.get_attribute("value") == "STU-NESTED-001"
+
+        # Verify back button exists
+        assert element_exists(browser, "btn-back")
+
+        # Click back button to return to table
+        click_button(browser, "btn-back")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're back on the table view
+        assert element_exists(browser, "table-save")
+
+    def test_deep_nesting_navigation(self, browser):
+        """Navigate from Investigation > Study > BiologicalMaterial."""
+        browser.get(BASE_URL)
+        time.sleep(CLICK_DELAY)
+
+        # Create Investigation
+        click_button(browser, "btn-create-Investigation")
+        fill_field(browser, "input-unique-id", "INV-DEEP-001")
+        fill_field(browser, "input-title", "Deep Nesting Investigation")
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Click on the created entity
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if "Deep Nesting Investigation" in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Expand optional fields and add a Study
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_field(browser, "cell-0-unique_id", "STU-DEEP-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Deep Study", trigger_change=True)
+
+        # Save and go back to Investigation
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Go back to Studies table
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        time.sleep(CLICK_DELAY)
+
+        # Click on Study row to edit it
+        click_element(browser, "row-0")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're in Study form
+        assert element_exists(browser, "form-entity")
+
+        # Expand optional fields in Study form
+        expand_optional_fields(browser)
+
+        # Click on biological_materials nested field
+        click_button(browser, "btn-nested-biological-materials")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're in BiologicalMaterial table view
+        assert element_exists(browser, "table-add-row")
+
+        # Add a BiologicalMaterial
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+
+        fill_field(browser, "cell-0-unique_id", "BM-001", trigger_change=True)
+        fill_field(browser, "cell-0-organism", "Arabidopsis thaliana", trigger_change=True)
+
+        # Save
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Verify we're back in Study form
+        assert element_exists(browser, "form-entity")
+
+        # Go back to biological_materials table
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-biological-materials")
+        time.sleep(CLICK_DELAY)
+
+        # Click on BiologicalMaterial row to edit
+        click_element(browser, "row-0")
+        time.sleep(CLICK_DELAY)
+
+        # Verify breadcrumb shows full path
+        assert element_exists(browser, "breadcrumb")
+        breadcrumb = browser.find_element(By.CSS_SELECTOR, "[data-testid='breadcrumb']")
+        breadcrumb_text = breadcrumb.text
+        assert "Investigation" in breadcrumb_text
+        assert "studies" in breadcrumb_text
+        assert "biological_materials" in breadcrumb_text
+
+        # Verify BiologicalMaterial form fields
+        unique_id_field = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-unique-id']")
+        assert unique_id_field.get_attribute("value") == "BM-001"
+
+        # Navigate all the way back using back buttons
+        click_button(browser, "btn-back")  # Back to BM table
+        time.sleep(CLICK_DELAY)
+        assert element_exists(browser, "table-save")
+
+        click_button(browser, "table-save")  # Back to Study form
+        time.sleep(CLICK_DELAY)
+        assert element_exists(browser, "form-entity")
+
+        click_button(browser, "btn-back")  # Back to Studies table
+        time.sleep(CLICK_DELAY)
+        assert element_exists(browser, "table-save")
+
+        click_button(browser, "table-save")  # Back to Investigation form
+        time.sleep(CLICK_DELAY)
+        assert element_exists(browser, "form-entity")
+
+        # Verify we're back at Investigation level (btn-create or btn-update visible)
+        assert element_exists(browser, "btn-update")

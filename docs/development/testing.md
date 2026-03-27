@@ -141,6 +141,9 @@ All interactive UI elements have `data-testid` attributes for reliable selection
 | Table save | `table-save` | `table-save` |
 | Table count | `table-count` | `table-count` |
 | Table cell | `cell-{row}-{column}` | `cell-0-name` |
+| Table row (clickable) | `row-{idx}` | `row-0` |
+| Breadcrumb | `breadcrumb` | `breadcrumb` |
+| Back button | `btn-back` | `btn-back` |
 | Notification | `notification` | `notification` |
 
 #### Helper Functions
@@ -201,6 +204,36 @@ When filling table cells that have HTMX handlers, trigger the change event:
 fill_field(browser, "cell-0-name", "Dr. Smith", trigger_change=True)
 ```
 
+## Nested Entity Editing
+
+The UI supports deep nesting of entities. When viewing a table of nested entities (e.g., Studies within an Investigation), users can click on a table row to edit that nested entity in a full form view.
+
+### Behavior
+
+1. **Click row to edit**: Clicking a table row opens a form for editing that nested entity
+2. **Breadcrumb navigation**: A breadcrumb trail shows the navigation path (e.g., "Investigation > studies > Study[0]")
+3. **Deep nesting**: Nested entities can contain their own nested entities (e.g., Study > biological_materials > BiologicalMaterial)
+4. **Save & Back**: Saves changes and returns to the parent table view
+5. **Cancel**: Returns to parent without saving
+
+### Test IDs for Nested Editing
+
+| Element | Pattern | Example |
+|---------|---------|---------|
+| Table row (clickable) | `row-{idx}` | `row-0` |
+| Breadcrumb | `breadcrumb` | `breadcrumb` |
+| Back button | `btn-back` | `btn-back` |
+
+### Example Flow
+
+```
+Investigation (root form)
+  └─ Click "studies" button → Table view
+      └─ Click row 0 → Study form
+          └─ Click "biological_materials" button → Table view
+              └─ Click row 0 → BiologicalMaterial form
+```
+
 ## Selenium Test Coverage
 
 The following end-to-end tests are implemented:
@@ -215,6 +248,8 @@ The following end-to-end tests are implemented:
 | `TestAddNestedStudy` | `test_add_nested_study` | Add Study through nested table |
 | `TestValidationError` | `test_validation_error_missing_required` | Verify HTML5 validation on required fields |
 | `TestProfileSwitch` | `test_switch_profile_clears_state` | Switch profile and verify state cleared |
+| `TestNestedEntityEditing` | `test_edit_nested_study` | Click Study row to edit, verify form shows |
+| `TestNestedEntityEditing` | `test_deep_nesting_navigation` | Navigate Investigation > Study > BiologicalMaterial |
 
 ## Markers
 

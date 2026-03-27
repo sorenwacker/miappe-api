@@ -443,8 +443,16 @@ body {
     font-weight: 500;
 }
 
-.breadcrumb-separator {
+.breadcrumb-separator,
+.breadcrumb-sep {
     color: #9ca3af;
+}
+
+.row-actions {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+    padding: 0.25rem !important;
 }
 
 /* Notifications */

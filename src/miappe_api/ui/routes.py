@@ -5,6 +5,7 @@ Provides FastAPI routes with Jinja2 templates for the HTMX-based interface.
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -67,6 +68,17 @@ class TreeNode:
 
 
 @dataclass
+class NestedEditContext:
+    """Context for editing a nested item."""
+
+    field_name: str  # The field containing this item (e.g., "studies")
+    row_idx: int  # Index in the parent's list
+    entity_type: str  # Entity type being edited (e.g., "Study")
+    parent_entity_type: str  # Parent entity type (e.g., "Investigation")
+    nested_items: dict[str, list] = field(default_factory=dict)  # This item's nested fields
+
+
+@dataclass
 class AppState:
     """Server-side state for the UI."""
 
@@ -76,6 +88,7 @@ class AppState:
     nodes_by_id: dict[str, TreeNode] = field(default_factory=dict)
     editing_node_id: str | None = None
     current_nested_items: dict[str, list] = field(default_factory=dict)
+    nested_edit_stack: list[NestedEditContext] = field(default_factory=list)  # Navigation stack
 
     def get_or_create_facade(self) -> ProfileFacade:
         """Get existing facade or create new one."""
@@ -454,7 +467,12 @@ def create_app(state: AppState | None = None) -> FastAPI:
         else:
             columns = ["value"]
 
-        items = state.current_nested_items.get(field_name, [])
+        # Check if we're in a nested context and use context's items if appropriate
+        nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
+        if nested_context and field_name in nested_context.nested_items:
+            items = nested_context.nested_items.get(field_name, [])
+        else:
+            items = state.current_nested_items.get(field_name, [])
 
         rows = []
         for i, item in enumerate(items):
@@ -467,6 +485,9 @@ def create_app(state: AppState | None = None) -> FastAPI:
             row["_idx"] = i
             rows.append(row)
 
+        # Determine if we're in a nested context (editing nested item)
+        nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
+
         return templates.TemplateResponse(
             request,
             "partials/table.html",
@@ -477,24 +498,38 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "rows": rows,
                 "parent_entity_type": entity_type,
                 "editing_node_id": state.editing_node_id,
+                "breadcrumb": _build_breadcrumb(state),
+                "nested_context": nested_context,
             },
         )
 
-    @app.post("/table/{field_name}/row", response_class=HTMLResponse)
-    async def add_table_row(request: Request, field_name: str):
+    @app.post("/table/{parent_entity_type}/{field_name}/row", response_class=HTMLResponse)
+    async def add_table_row(request: Request, parent_entity_type: str, field_name: str):
         """Add a new row to the nested table."""
         state = get_state()
+        facade = state.get_or_create_facade()
 
-        if field_name not in state.current_nested_items:
-            state.current_nested_items[field_name] = []
+        # Determine where to store items (context or root state)
+        nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
+        if nested_context and field_name in nested_context.nested_items:
+            items_store = nested_context.nested_items
+        else:
+            items_store = state.current_nested_items
+
+        if field_name not in items_store:
+            items_store[field_name] = []
 
         form_data = await request.form()
         # Extract column names from _col_* hidden inputs
         columns = [form_data[k] for k in form_data if k.startswith("_col_")]
 
         new_row = dict.fromkeys(columns, "")
-        new_row["_idx"] = len(state.current_nested_items[field_name])
-        state.current_nested_items[field_name].append(new_row)
+        new_row["_idx"] = len(items_store[field_name])
+        items_store[field_name].append(new_row)
+
+        # Get entity type for the row
+        parent_helper = getattr(facade, parent_entity_type, None)
+        entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
 
         return templates.TemplateResponse(
             request,
@@ -503,6 +538,8 @@ def create_app(state: AppState | None = None) -> FastAPI:
                 "row": new_row,
                 "columns": columns,
                 "field_name": field_name,
+                "parent_entity_type": parent_entity_type,
+                "entity_type": entity_type,
             },
         )
 
@@ -511,8 +548,15 @@ def create_app(state: AppState | None = None) -> FastAPI:
         """Delete a row from the nested table."""
         state = get_state()
 
-        if field_name in state.current_nested_items:
-            items = state.current_nested_items[field_name]
+        # Determine which items store to use
+        nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
+        if nested_context and field_name in nested_context.nested_items:
+            items_store = nested_context.nested_items
+        else:
+            items_store = state.current_nested_items
+
+        if field_name in items_store:
+            items = items_store[field_name]
             if 0 <= idx < len(items):
                 del items[idx]
                 for i, item in enumerate(items):
@@ -526,8 +570,15 @@ def create_app(state: AppState | None = None) -> FastAPI:
         """Update a cell value in the nested table."""
         state = get_state()
 
-        if field_name in state.current_nested_items:
-            items = state.current_nested_items[field_name]
+        # Determine which items store to use
+        nested_context = state.nested_edit_stack[-1] if state.nested_edit_stack else None
+        if nested_context and field_name in nested_context.nested_items:
+            items_store = nested_context.nested_items
+        else:
+            items_store = state.current_nested_items
+
+        if field_name in items_store:
+            items = items_store[field_name]
             if 0 <= idx < len(items):
                 form_data = await request.form()
                 item = items[idx]
@@ -537,6 +588,169 @@ def create_app(state: AppState | None = None) -> FastAPI:
                             item[key] = value
 
         return HTMLResponse(content="")
+
+    @app.get("/nested/{parent_type}/{field_name}/{idx}", response_class=HTMLResponse)
+    async def edit_nested_item(request: Request, parent_type: str, field_name: str, idx: int):
+        """Edit a nested item (e.g., a Study within an Investigation).
+
+        Query params:
+            resume: If true, don't push a new context (returning from child table)
+        """
+        state = get_state()
+        facade = state.get_or_create_facade()
+        is_resume = request.query_params.get("resume") == "true"
+
+        # Get parent entity helper to find nested entity type
+        try:
+            parent_helper = getattr(facade, parent_type)
+        except AttributeError as e:
+            raise HTTPException(
+                status_code=404, detail=f"Entity type not found: {parent_type}"
+            ) from e
+
+        if field_name not in parent_helper.nested_fields:
+            raise HTTPException(status_code=404, detail=f"Field not found: {field_name}")
+
+        nested_entity_type = parent_helper.nested_fields[field_name]
+        nested_helper = getattr(facade, nested_entity_type, None)
+
+        # For resume: use existing context's nested items
+        # For fresh edit: get items from parent's current_nested_items
+        if is_resume and state.nested_edit_stack:
+            # Use the top of stack context's nested items
+            context = state.nested_edit_stack[-1]
+            # Get item data from parent items, merge with context nested items
+            parent_items = state.current_nested_items.get(field_name, [])
+            if idx < len(parent_items):
+                item_data = parent_items[idx]
+                if hasattr(item_data, "model_dump"):
+                    item_data = item_data.model_dump(exclude_none=True)
+                elif isinstance(item_data, dict):
+                    item_data = item_data.copy()
+                else:
+                    item_data = {}
+                # Merge context nested items back
+                for nf, nv in context.nested_items.items():
+                    item_data[nf] = nv
+            else:
+                item_data = {}
+        else:
+            # Get the nested item data from parent's nested items
+            items = state.current_nested_items.get(field_name, [])
+            if idx < 0 or idx >= len(items):
+                raise HTTPException(status_code=404, detail=f"Row not found: {idx}")
+
+            item_data = items[idx]
+            if hasattr(item_data, "model_dump"):
+                item_data = item_data.model_dump(exclude_none=True)
+            elif isinstance(item_data, dict):
+                item_data = item_data.copy()
+            else:
+                item_data = {}
+
+            # Push context onto stack
+            context = NestedEditContext(
+                field_name=field_name,
+                row_idx=idx,
+                entity_type=nested_entity_type,
+                parent_entity_type=parent_type,
+            )
+
+            # Load nested items for this item
+            if nested_helper:
+                for nested_field in nested_helper.nested_fields:
+                    if nested_field in item_data and item_data[nested_field]:
+                        nested_items = item_data[nested_field]
+                        if isinstance(nested_items, list):
+                            context.nested_items[nested_field] = [
+                                i.model_dump() if hasattr(i, "model_dump") else i
+                                for i in nested_items
+                            ]
+
+            state.nested_edit_stack.append(context)
+
+        # Get field info for the nested entity
+        fields = _get_field_data(nested_helper) if nested_helper else []
+
+        return templates.TemplateResponse(
+            request,
+            "partials/nested_form.html",
+            {
+                "entity_type": nested_entity_type,
+                "parent_entity_type": parent_type,
+                "field_name": field_name,
+                "row_idx": idx,
+                "description": nested_helper.description if nested_helper else "",
+                "ontology_term": nested_helper.ontology_term if nested_helper else "",
+                "required_fields": [f for f in fields if f["required"]],
+                "optional_fields": [f for f in fields if not f["required"]],
+                "values": item_data,
+                "editing_node_id": state.editing_node_id,
+                "breadcrumb": _build_breadcrumb(state),
+            },
+        )
+
+    @app.post("/nested/{parent_type}/{field_name}/{idx}", response_class=HTMLResponse)
+    async def save_nested_item(request: Request, parent_type: str, field_name: str, idx: int):
+        """Save changes to a nested item and return to parent table."""
+        state = get_state()
+        facade = state.get_or_create_facade()
+
+        # Get the nested item
+        items = state.current_nested_items.get(field_name, [])
+        if idx < 0 or idx >= len(items):
+            raise HTTPException(status_code=404, detail=f"Row not found: {idx}")
+
+        # Update item data from form
+        form_data = await request.form()
+
+        # Get nested entity helper for field info
+        parent_helper = getattr(facade, parent_type, None)
+        nested_entity_type = parent_helper.nested_fields.get(field_name) if parent_helper else None
+        nested_helper = getattr(facade, nested_entity_type, None) if nested_entity_type else None
+
+        item = items[idx]
+        if isinstance(item, dict):
+            for key, value in form_data.items():
+                if not key.startswith("_"):
+                    # Convert value types if needed
+                    if nested_helper:
+                        info = (
+                            nested_helper.field_info(key) if key in nested_helper.all_fields else {}
+                        )
+                        if info.get("type") == "integer" and value:
+                            with contextlib.suppress(ValueError):
+                                value = int(value)
+                        elif info.get("type") == "float" and value:
+                            with contextlib.suppress(ValueError):
+                                value = float(value)
+                    if value:  # Only set non-empty values
+                        item[key] = value
+
+            # Merge nested items from stack context
+            if state.nested_edit_stack:
+                context = state.nested_edit_stack[-1]
+                for nested_field, nested_values in context.nested_items.items():
+                    if nested_values:
+                        item[nested_field] = nested_values
+
+        # Pop from stack
+        if state.nested_edit_stack:
+            state.nested_edit_stack.pop()
+
+        # Return to parent table
+        return templates.TemplateResponse(
+            request,
+            "partials/table.html",
+            {
+                "field_name": field_name,
+                "entity_type": nested_entity_type,
+                "columns": _get_table_columns(facade, nested_entity_type),
+                "rows": _format_table_rows(items),
+                "parent_entity_type": parent_type,
+                "editing_node_id": state.editing_node_id,
+            },
+        )
 
     @app.get("/profile/{name}")
     async def switch_profile(name: str):
@@ -552,8 +766,20 @@ def create_app(state: AppState | None = None) -> FastAPI:
         state.nodes_by_id = {}
         state.editing_node_id = None
         state.current_nested_items = {}
+        state.nested_edit_stack = []
 
         return RedirectResponse(url="/", status_code=303)
+
+    @app.post("/reset", response_class=HTMLResponse)
+    async def reset_state():
+        """Reset all application state. Used for testing."""
+        state = get_state()
+        state.entity_tree = []
+        state.nodes_by_id = {}
+        state.editing_node_id = None
+        state.current_nested_items = {}
+        state.nested_edit_stack = []
+        return HTMLResponse(content="OK")
 
     return app
 
@@ -623,6 +849,68 @@ def _error_response(request: Request, templates: Jinja2Templates, message: str) 
             "message": message,
         },
     )
+
+
+def _get_table_columns(facade: ProfileFacade, entity_type: str) -> list[str]:
+    """Get table columns for a nested entity type."""
+    helper = getattr(facade, entity_type, None)
+    if not helper:
+        return ["value"]
+
+    cols = list(helper.required_fields) + list(helper.optional_fields)
+    nested = set(helper.nested_fields.keys())
+    return [c for c in cols if c not in nested]
+
+
+def _format_table_rows(items: list) -> list[dict]:
+    """Format items for table row rendering."""
+    rows = []
+    for i, item in enumerate(items):
+        if hasattr(item, "model_dump"):
+            row = item.model_dump(exclude_none=True)
+        elif isinstance(item, dict):
+            row = item.copy()
+        else:
+            row = {"value": str(item)}
+        row["_idx"] = i
+        rows.append(row)
+    return rows
+
+
+def _build_breadcrumb(state: AppState) -> list[dict]:
+    """Build breadcrumb navigation from nested edit stack."""
+    breadcrumb = []
+
+    # Root entity (if editing)
+    if state.editing_node_id:
+        node = state.nodes_by_id.get(state.editing_node_id)
+        if node:
+            breadcrumb.append(
+                {
+                    "label": node.label or node.entity_type,
+                    "entity_type": node.entity_type,
+                    "url": f"/form/{node.entity_type}/{node.id}",
+                }
+            )
+
+    # Nested contexts
+    for ctx in state.nested_edit_stack:
+        breadcrumb.append(
+            {
+                "label": ctx.field_name,
+                "entity_type": ctx.entity_type,
+                "url": None,  # Table views don't have direct URL
+            }
+        )
+        breadcrumb.append(
+            {
+                "label": f"{ctx.entity_type}[{ctx.row_idx}]",
+                "entity_type": ctx.entity_type,
+                "url": None,  # Current position
+            }
+        )
+
+    return breadcrumb
 
 
 app = create_app()

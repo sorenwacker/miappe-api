@@ -1,0 +1,69 @@
+<div class="card">
+    {% if breadcrumb %}
+    <nav class="breadcrumb" data-testid="breadcrumb">
+        {% for item in breadcrumb %}
+        <span class="breadcrumb-item">{{ item.label }}</span>
+        {% if not loop.last %}<span class="breadcrumb-sep">&gt;</span>{% endif %}
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    <h2 class="card-title">
+        Edit {{ entity_type }}
+    </h2>
+    {% if description %}
+    <p class="card-subtitle">{{ description }}</p>
+    {% endif %}
+    {% if ontology_term %}
+    <p class="text-small text-muted mb-4">Ontology: {{ ontology_term }}</p>
+    {% endif %}
+
+    <form hx-post="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row_idx }}"
+          hx-target="#main"
+          hx-swap="innerHTML"
+          data-testid="form-entity">
+
+        <input type="hidden" name="_entity_type" value="{{ entity_type }}">
+        <input type="hidden" name="_parent_entity_type" value="{{ parent_entity_type }}">
+        <input type="hidden" name="_field_name" value="{{ field_name }}">
+        <input type="hidden" name="_row_idx" value="{{ row_idx }}">
+
+        {% if required_fields %}
+        <div class="form-section">
+            <h3 class="form-section-title">Required Fields</h3>
+            {% for field in required_fields %}
+            {% set is_edit = True %}
+            {% include "partials/field.html" %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if optional_fields %}
+        <div class="collapsible">
+            <div class="collapsible-header" data-testid="section-optional-toggle">
+                <span class="collapsible-icon">&#9654;</span>
+                <span>Optional Fields</span>
+            </div>
+            <div class="collapsible-content">
+                {% for field in optional_fields %}
+                {% set is_edit = True %}
+                {% include "partials/field.html" %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" data-testid="btn-update">
+                Save
+            </button>
+            <button type="button" class="btn btn-secondary"
+                    hx-get="/table/{{ parent_entity_type }}/{{ field_name }}"
+                    hx-target="#main"
+                    hx-swap="innerHTML"
+                    data-testid="btn-back">
+                Back
+            </button>
+        </div>
+    </form>
+</div>

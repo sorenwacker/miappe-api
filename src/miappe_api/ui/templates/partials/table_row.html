@@ -12,7 +12,15 @@
                data-testid="cell-{{ row._idx }}-{{ col }}">
     </td>
     {% endfor %}
-    <td>
+    <td class="row-actions">
+        <button class="btn-icon"
+                hx-get="/nested/{{ parent_entity_type }}/{{ field_name }}/{{ row._idx }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                title="Edit {{ entity_type }}"
+                data-testid="row-{{ row._idx }}">
+            &#9998;
+        </button>
         <button class="btn-icon danger"
                 hx-delete="/table/{{ field_name }}/row/{{ row._idx }}"
                 hx-target="#row-{{ row._idx }}"

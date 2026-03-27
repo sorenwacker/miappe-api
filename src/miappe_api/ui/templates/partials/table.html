@@ -1,4 +1,15 @@
 <div class="card">
+    {% if breadcrumb %}
+    <nav class="breadcrumb" data-testid="breadcrumb">
+        {% for item in breadcrumb %}
+        <span class="breadcrumb-item">{{ item.label }}</span>
+        {% if not loop.last %}<span class="breadcrumb-sep">&gt;</span>{% endif %}
+        {% endfor %}
+        <span class="breadcrumb-sep">&gt;</span>
+        <span class="breadcrumb-item">{{ field_name }}</span>
+    </nav>
+    {% endif %}
+
     <div class="table-header">
         <div>
             <h2 class="card-title" style="display: inline-block;">
@@ -10,13 +21,24 @@
 
     <div class="table-actions">
         <button class="btn btn-primary btn-sm"
-                hx-post="/table/{{ field_name }}/row"
+                hx-post="/table/{{ parent_entity_type }}/{{ field_name }}/row"
                 hx-target="#table-body"
                 hx-swap="beforeend"
                 hx-include="[name^='_col_']"
                 data-testid="table-add-row">
             + Add Row
         </button>
+        {% if nested_context %}
+        {# We're in a nested context - go back to the nested form #}
+        <button class="btn btn-primary"
+                hx-get="/nested/{{ nested_context.parent_entity_type }}/{{ nested_context.field_name }}/{{ nested_context.row_idx }}?resume=true"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                data-testid="table-save">
+            Save & Back
+        </button>
+        {% else %}
+        {# Root level - go back to the main form #}
         <button class="btn btn-primary"
                 hx-get="/form/{{ parent_entity_type }}/{{ editing_node_id }}"
                 hx-target="#main"
@@ -24,6 +46,7 @@
                 data-testid="table-save">
             Save & Back
         </button>
+        {% endif %}
     </div>
 
     <table class="data-table">
