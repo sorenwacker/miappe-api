@@ -752,19 +752,19 @@ class TestAutoPopulatedFields:
         )
 
         # Verify it has a value (auto-populated)
-        assert version_input.get_attribute("value") == "1.1", (
-            f"Expected miappe_version to be '1.1', got: {version_input.get_attribute('value')}"
-        )
+        assert (
+            version_input.get_attribute("value") == "1.1"
+        ), f"Expected miappe_version to be '1.1', got: {version_input.get_attribute('value')}"
 
         # Verify it is readonly
-        assert version_input.get_attribute("readonly") is not None, (
-            "miappe_version field should be readonly"
-        )
+        assert (
+            version_input.get_attribute("readonly") is not None
+        ), "miappe_version field should be readonly"
 
         # Verify it has the readonly class
-        assert "form-input-readonly" in version_input.get_attribute("class"), (
-            "miappe_version field should have form-input-readonly class"
-        )
+        assert "form-input-readonly" in version_input.get_attribute(
+            "class"
+        ), "miappe_version field should have form-input-readonly class"
 
     def test_date_format_iso8601(self, browser):
         """Verify date fields use ISO 8601 format (YYYY-MM-DD)."""
@@ -777,24 +777,22 @@ class TestAutoPopulatedFields:
         expand_optional_fields(browser)
 
         # Find a date input
-        date_input = browser.find_element(
-            By.CSS_SELECTOR, "[data-testid='input-submission-date']"
-        )
+        date_input = browser.find_element(By.CSS_SELECTOR, "[data-testid='input-submission-date']")
 
         # Verify it uses text type with pattern
-        assert date_input.get_attribute("type") == "text", (
-            "Date field should be type='text' for consistent formatting"
-        )
+        assert (
+            date_input.get_attribute("type") == "text"
+        ), "Date field should be type='text' for consistent formatting"
 
         pattern = date_input.get_attribute("pattern")
-        assert pattern == r"\d{4}-\d{2}-\d{2}", (
-            f"Date field should have ISO 8601 pattern, got: {pattern}"
-        )
+        assert (
+            pattern == r"\d{4}-\d{2}-\d{2}"
+        ), f"Date field should have ISO 8601 pattern, got: {pattern}"
 
         placeholder = date_input.get_attribute("placeholder")
-        assert placeholder == "YYYY-MM-DD", (
-            f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
-        )
+        assert (
+            placeholder == "YYYY-MM-DD"
+        ), f"Date field placeholder should be 'YYYY-MM-DD', got: {placeholder}"
 
     def test_table_cell_invalid_latitude_highlighted(self, browser):
         """Verify invalid latitude values get highlighted in table cells."""
@@ -830,38 +828,32 @@ class TestAutoPopulatedFields:
         fill_field(browser, "cell-0-title", "Latitude Test Study", trigger_change=True)
 
         # Enter invalid latitude (43333 is way out of range, valid is -90 to 90)
-        lat_input = browser.find_element(
-            By.CSS_SELECTOR, "[data-testid='cell-0-latitude']"
-        )
+        lat_input = browser.find_element(By.CSS_SELECTOR, "[data-testid='cell-0-latitude']")
         lat_input.clear()
         lat_input.send_keys("43333")
         # Trigger input event to invoke validation
         browser.execute_script(
-            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
-            lat_input
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));", lat_input
         )
         time.sleep(0.5)
 
         # Verify the input has the 'invalid' class (red background)
         classes = lat_input.get_attribute("class")
-        assert "invalid" in classes, (
-            f"Invalid latitude should be highlighted. Classes: {classes}"
-        )
+        assert "invalid" in classes, f"Invalid latitude should be highlighted. Classes: {classes}"
 
         # Now enter a valid latitude
         lat_input.clear()
         lat_input.send_keys("52.5")
         browser.execute_script(
-            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));",
-            lat_input
+            "arguments[0].dispatchEvent(new Event('input', {bubbles: true}));", lat_input
         )
         time.sleep(0.5)
 
         # Verify the 'invalid' class is removed
         classes = lat_input.get_attribute("class")
-        assert "invalid" not in classes, (
-            f"Valid latitude should not be highlighted. Classes: {classes}"
-        )
+        assert (
+            "invalid" not in classes
+        ), f"Valid latitude should not be highlighted. Classes: {classes}"
 
 
 @pytest.mark.ui
@@ -1073,16 +1065,54 @@ class TestValidation:
     """Test validation functionality using the Validate button."""
 
     def test_validate_valid_investigation(self, browser):
-        """Validate a correctly filled Investigation form."""
+        """Validate a correctly filled Investigation form.
+
+        Note: Full validation requires contacts and studies (cardinality rules).
+        This test validates field-level requirements (unique_id, title) pass.
+        """
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
         # Create new Investigation form
         click_button(browser, "btn-create-Investigation")
 
-        # Fill all required fields from YAML example
+        # Fill required fields from YAML example
         fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
         fill_field(browser, "input-title", INV_EXAMPLE["title"])
+
+        # Create the investigation first
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Refresh and select the created investigation
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if INV_EXAMPLE["title"] in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Add a contact (required by cardinality rule)
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-contacts")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+        fill_field(browser, "cell-0-name", "Test Contact", trigger_change=True)
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Add a study (required by cardinality rule)
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+        fill_field(browser, "cell-0-unique_id", "STU-VAL-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Validation Test Study", trigger_change=True)
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
 
         # Click Validate button
         click_button(browser, "btn-validate")
@@ -1138,7 +1168,10 @@ class TestValidation:
         assert element_exists(browser, "validation-error-unique_id")
 
     def test_validate_then_fix_and_revalidate(self, browser):
-        """Validate with errors, fix them, and revalidate successfully."""
+        """Validate with errors, fix them, and revalidate successfully.
+
+        Tests the workflow of fixing validation errors iteratively.
+        """
         browser.get(BASE_URL)
         time.sleep(CLICK_DELAY)
 
@@ -1148,14 +1181,52 @@ class TestValidation:
         # Fill only unique_id (missing title)
         fill_field(browser, "input-unique-id", INV_EXAMPLE["unique_id"])
 
-        # Validate - should fail
+        # Validate - should fail (missing title)
         click_button(browser, "btn-validate")
         assert element_exists(browser, "validation-errors")
 
         # Fix by adding title
         fill_field(browser, "input-title", INV_EXAMPLE["title"])
 
-        # Validate again - should pass
+        # Create the investigation
+        click_button(browser, "btn-create")
+        time.sleep(CLICK_DELAY)
+
+        # Refresh and select the created investigation
+        browser.refresh()
+        time.sleep(CLICK_DELAY)
+
+        tree_nodes = browser.find_elements(By.CSS_SELECTOR, "[data-testid^='tree-node-']")
+        for node in tree_nodes:
+            if INV_EXAMPLE["title"] in node.text:
+                node.click()
+                break
+        time.sleep(CLICK_DELAY)
+
+        # Validate - should still fail (missing contacts and studies)
+        click_button(browser, "btn-validate")
+        assert element_exists(browser, "validation-errors")
+
+        # Add a contact
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-contacts")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+        fill_field(browser, "cell-0-name", "Fix Test Contact", trigger_change=True)
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Add a study
+        expand_optional_fields(browser)
+        click_button(browser, "btn-nested-studies")
+        click_button(browser, "table-add-row")
+        time.sleep(CLICK_DELAY)
+        fill_field(browser, "cell-0-unique_id", "STU-FIX-001", trigger_change=True)
+        fill_field(browser, "cell-0-title", "Fix Test Study", trigger_change=True)
+        click_button(browser, "table-save")
+        time.sleep(CLICK_DELAY)
+
+        # Validate again - should pass now
         click_button(browser, "btn-validate")
         assert element_exists(browser, "validation-success")
 
@@ -1785,7 +1856,9 @@ class TestExcelExport:
         wb = load_workbook(BytesIO(content))
 
         # Verify Investigation sheet
-        assert "Investigation" in wb.sheetnames, f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
+        assert (
+            "Investigation" in wb.sheetnames
+        ), f"Missing Investigation sheet. Sheets: {wb.sheetnames}"
 
         # Verify Person sheet (contacts)
         assert "Person" in wb.sheetnames, f"Missing Person sheet. Sheets: {wb.sheetnames}"
