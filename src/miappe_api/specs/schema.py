@@ -134,6 +134,11 @@ class ValidationRuleSpec(BaseModel):
         field: Field the rule applies to (optional).
         condition: Rule condition expression.
         pattern: Regex pattern for pattern rules.
+        minimum: Minimum value for numeric range rules.
+        maximum: Maximum value for numeric range rules.
+        enum: Allowed values for vocabulary rules.
+        reference: Entity.field reference for integrity rules.
+        unique_within: Scope for uniqueness rules (e.g., "parent").
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -144,6 +149,11 @@ class ValidationRuleSpec(BaseModel):
     field: str | None = None
     condition: str | None = None
     pattern: str | None = None
+    minimum: float | None = None
+    maximum: float | None = None
+    enum: list[str] | None = None
+    reference: str | None = None
+    unique_within: str | None = None
 
 
 class ProfileSpec(BaseModel):
