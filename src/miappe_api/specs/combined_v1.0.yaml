@@ -172,6 +172,126 @@ validation_rules:
     field: identifier
     unique_within: parent
 
+  # URI format validations
+  - name: license_uri_format
+    description: License must be a valid URI
+    applies_to: [Investigation]
+    field: license
+    pattern: "^https?://.*$"
+
+  - name: datafile_link_format
+    description: DataFile link must be a valid URI
+    applies_to: [DataFile]
+    field: link
+    pattern: "^https?://.*$|^s3://.*$|^ftp://.*$"
+
+  - name: protocol_uri_format
+    description: Protocol URI must be valid
+    applies_to: [Protocol]
+    field: uri
+    pattern: "^https?://.*$"
+
+  # Publication identifiers
+  - name: doi_format
+    description: DOI must follow standard format
+    applies_to: [Publication]
+    field: doi
+    pattern: "^10\\.[0-9]{4,}/.*$"
+
+  - name: pubmed_id_format
+    description: PubMed ID must be numeric
+    applies_to: [Publication]
+    field: pubmed_id
+    pattern: "^[0-9]+$"
+
+  # Ontology term format
+  - name: ontology_accession_format
+    description: Ontology term accession must be PREFIX:ID or URI format
+    applies_to: [OntologyAnnotation]
+    field: term_accession
+    pattern: "^[A-Za-z]+:[0-9]+$|^https?://.*$"
+
+  # Altitude range
+  - name: altitude_range
+    description: Altitude must be reasonable (-500 to 9000 meters)
+    applies_to: [Study]
+    field: altitude
+    minimum: -500
+    maximum: 9000
+
+  # Cardinality constraints
+  - name: investigation_has_studies
+    description: Investigation must have at least one study
+    applies_to: [Investigation]
+    field: studies
+    min_items: 1
+
+  - name: investigation_has_contacts
+    description: Investigation must have at least one contact
+    applies_to: [Investigation]
+    field: contacts
+    min_items: 1
+
+  - name: study_has_contacts
+    description: Study must have at least one contact
+    applies_to: [Study]
+    field: contacts
+    min_items: 1
+
+  # Additional reference integrity
+  - name: process_protocol_reference
+    description: Process executes_protocol must reference valid Protocol
+    applies_to: [Process]
+    field: executes_protocol
+    reference: Protocol.name
+
+  - name: assay_protocol_reference
+    description: Assay protocols must reference valid Protocols
+    applies_to: [Assay]
+    field: protocols
+    reference: Protocol.name
+
+  # ObservedVariable completeness
+  - name: observed_variable_trait_required
+    description: ObservedVariable must have trait or trait_accession_number
+    applies_to: [ObservedVariable]
+    condition: trait OR trait_accession_number
+
+  - name: observed_variable_method_required
+    description: ObservedVariable must have method or method_accession_number
+    applies_to: [ObservedVariable]
+    condition: method OR method_accession_number
+
+  - name: observed_variable_scale_required
+    description: ObservedVariable must have scale or scale_accession_number
+    applies_to: [ObservedVariable]
+    condition: scale OR scale_accession_number
+
+  # ISO date format
+  - name: date_format
+    description: Dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: start_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: end_date_format
+    description: End dates must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: all
+    field: end_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: submission_date_format
+    description: Submission date must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: [Investigation, Study]
+    field: submission_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
+  - name: public_release_date_format
+    description: Public release date must be ISO 8601 format (YYYY-MM-DD)
+    applies_to: [Investigation, Study]
+    field: public_release_date
+    pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+
 entities:
 
   # ============================================================================

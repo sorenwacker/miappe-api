@@ -139,6 +139,8 @@ class ValidationRuleSpec(BaseModel):
         enum: Allowed values for vocabulary rules.
         reference: Entity.field reference for integrity rules.
         unique_within: Scope for uniqueness rules (e.g., "parent").
+        min_items: Minimum items for list cardinality rules.
+        max_items: Maximum items for list cardinality rules.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -154,6 +156,8 @@ class ValidationRuleSpec(BaseModel):
     enum: list[str] | None = None
     reference: str | None = None
     unique_within: str | None = None
+    min_items: int | None = None
+    max_items: int | None = None
 
 
 class ProfileSpec(BaseModel):
