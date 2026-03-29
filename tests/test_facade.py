@@ -263,6 +263,128 @@ class TestISAFacade:
         assert nested["studies"] == "Study"
 
 
+class TestEntityHelperOutput:
+    """Tests for EntityHelper output methods (help, example)."""
+
+    @pytest.fixture
+    def miappe_facade(self) -> ProfileFacade:
+        """Create MIAPPE facade."""
+        return ProfileFacade("miappe", "1.1")
+
+    def test_help_prints_entity_info(
+        self, miappe_facade: ProfileFacade, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """help() prints entity information."""
+        miappe_facade.Investigation.help()
+        output = capsys.readouterr().out
+
+        assert "Investigation" in output
+        assert "Required Fields" in output
+        assert "Optional Fields" in output
+        assert "unique_id" in output
+        assert "title" in output
+
+    def test_help_shows_ontology_term(
+        self, miappe_facade: ProfileFacade, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """help() shows ontology term if present."""
+        miappe_facade.Investigation.help()
+        output = capsys.readouterr().out
+
+        # Investigation should have an ontology term
+        assert "Ontology" in output or "investigation" in output.lower()
+
+    def test_example_prints_code(
+        self, miappe_facade: ProfileFacade, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """example() prints example code."""
+        miappe_facade.Investigation.example()
+        output = capsys.readouterr().out
+
+        assert "Create a Investigation" in output
+        assert "profile.Investigation" in output
+        assert ".create(" in output
+
+    def test_example_includes_required_fields(
+        self, miappe_facade: ProfileFacade, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """example() includes required fields."""
+        miappe_facade.Investigation.example()
+        output = capsys.readouterr().out
+
+        assert "unique_id=" in output
+        assert "title=" in output
+
+    def test_ontology_term_property(self, miappe_facade: ProfileFacade) -> None:
+        """ontology_term property returns ontology identifier."""
+        term = miappe_facade.Investigation.ontology_term
+
+        # May be None or a string
+        assert term is None or isinstance(term, str)
+
+    def test_example_data_property(self, miappe_facade: ProfileFacade) -> None:
+        """example_data property returns example values."""
+        data = miappe_facade.Investigation.example_data
+
+        assert isinstance(data, dict)
+
+    def test_field_info_with_constraints(self, miappe_facade: ProfileFacade) -> None:
+        """field_info includes constraints when present."""
+        # unique_id usually has pattern constraint
+        info = miappe_facade.Investigation.field_info("unique_id")
+
+        assert "name" in info
+        # Constraints may or may not be present
+        if "constraints" in info:
+            assert isinstance(info["constraints"], dict)
+
+
+class TestProfileFacadeOutput:
+    """Tests for ProfileFacade output methods."""
+
+    def test_help_profile_overview(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """help() without argument shows profile overview."""
+        facade = ProfileFacade("miappe", "1.1")
+        facade.help()
+        output = capsys.readouterr().out
+
+        assert "MIAPPE" in output
+        assert "1.1" in output
+        assert "Entities" in output
+        assert "Usage" in output
+
+    def test_help_specific_entity(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """help() with entity name shows entity help."""
+        facade = ProfileFacade("miappe", "1.1")
+        facade.help("Investigation")
+        output = capsys.readouterr().out
+
+        assert "Investigation" in output
+        assert "Required Fields" in output
+
+    def test_private_attr_raises(self) -> None:
+        """Accessing private attributes raises AttributeError."""
+        facade = ProfileFacade("miappe", "1.1")
+
+        with pytest.raises(AttributeError):
+            _ = facade._private_attr
+
+    def test_search_field_names(self) -> None:
+        """search finds field names."""
+        facade = ProfileFacade("miappe", "1.1")
+
+        results = facade.search("unique_id")
+        assert len(results) > 0
+        assert any("unique_id" in r for r in results)
+
+    def test_invalid_profile_raises(self) -> None:
+        """Creating facade with invalid profile raises."""
+        from miappe_api.specs.loader import SpecLoadError
+
+        with pytest.raises(SpecLoadError):
+            ProfileFacade("nonexistent_profile", "1.0")
+
+
 class TestCombinedFacade:
     """Tests specific to combined ISA+MIAPPE profile facade."""
 

@@ -149,3 +149,103 @@ class TestEntitiesCommand:
         result = runner.invoke(app, ["entities", "--version", "1.1"])
         assert result.exit_code == 0
         assert "investigation" in result.stdout.lower()
+
+
+class TestValidateCommandEdgeCases:
+    """Edge case tests for validate command."""
+
+    def test_validate_invalid_yaml_syntax(self, tmp_path: Path) -> None:
+        """Validate file with invalid YAML syntax shows error."""
+        content = """
+unique_id: INV001
+  bad_indent: this is invalid yaml
+    nested: wrong
+"""
+        file_path = tmp_path / "invalid.yaml"
+        file_path.write_text(content)
+
+        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        assert result.exit_code != 0
+
+    def test_validate_empty_yaml(self, tmp_path: Path) -> None:
+        """Validate empty YAML file."""
+        file_path = tmp_path / "empty.yaml"
+        file_path.write_text("")
+
+        result = runner.invoke(app, ["validate", str(file_path), "--entity", "investigation"])
+        # Empty should fail validation (missing required fields)
+        assert "title" in result.stdout.lower() or result.exit_code != 0
+
+    def test_validate_invalid_entity(self, tmp_path: Path) -> None:
+        """Validate with invalid entity type shows error."""
+        content = "unique_id: TEST001"
+        file_path = tmp_path / "test.yaml"
+        file_path.write_text(content)
+
+        result = runner.invoke(app, ["validate", str(file_path), "--entity", "nonexistent"])
+        assert result.exit_code != 0
+
+
+class TestTemplateCommandEdgeCases:
+    """Edge case tests for template command."""
+
+    def test_template_invalid_entity(self) -> None:
+        """Generate template for invalid entity shows error."""
+        result = runner.invoke(app, ["template", "nonexistent_entity"])
+        assert result.exit_code != 0
+
+    def test_template_study(self) -> None:
+        """Generate template for study entity."""
+        result = runner.invoke(app, ["template", "study"])
+        assert result.exit_code == 0
+        assert "unique_id" in result.stdout
+        assert "title" in result.stdout
+
+    def test_template_person(self) -> None:
+        """Generate template for person entity."""
+        result = runner.invoke(app, ["template", "person"])
+        assert result.exit_code == 0
+        assert "name" in result.stdout
+
+
+class TestConvertCommandEdgeCases:
+    """Edge case tests for convert command."""
+
+    def test_convert_invalid_input(self, tmp_path: Path) -> None:
+        """Convert nonexistent input file shows error."""
+        output_path = tmp_path / "output.json"
+
+        result = runner.invoke(
+            app,
+            ["convert", "/nonexistent/input.yaml", str(output_path), "--entity", "investigation"],
+        )
+        assert result.exit_code != 0
+
+    def test_convert_invalid_yaml(self, tmp_path: Path) -> None:
+        """Convert invalid YAML shows error."""
+        content = """
+invalid:
+  - yaml: [syntax
+"""
+        input_path = tmp_path / "invalid.yaml"
+        input_path.write_text(content)
+        output_path = tmp_path / "output.json"
+
+        result = runner.invoke(
+            app,
+            ["convert", str(input_path), str(output_path), "--entity", "investigation"],
+        )
+        assert result.exit_code != 0
+
+    def test_convert_invalid_entity(self, tmp_path: Path) -> None:
+        """Convert with invalid entity type shows error."""
+        content = "unique_id: TEST001"
+        input_path = tmp_path / "test.yaml"
+        input_path.write_text(content)
+        output_path = tmp_path / "output.json"
+
+        result = runner.invoke(
+            app,
+            ["convert", str(input_path), str(output_path), "--entity", "nonexistent"],
+        )
+        assert result.exit_code != 0

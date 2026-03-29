@@ -3,7 +3,13 @@
 import datetime
 
 from miappe_api.validators.rules import (
+    CardinalityRule,
+    ConditionalRule,
+    CoordinatePairRule,
     DateRangeRule,
+    EnumRule,
+    NumericRangeRule,
+    PatternRule,
     RequiredFieldsRule,
     UniqueIdPatternRule,
     ValidationError,
@@ -211,6 +217,241 @@ class TestEntityReferenceRule:
         errors = rule.validate(data)
         assert len(errors) == 1
         assert "SRC-INVALID" in errors[0].message
+
+
+class TestPatternRule:
+    """Tests for PatternRule."""
+
+    def test_valid_pattern(self) -> None:
+        """Value matching pattern passes."""
+        rule = PatternRule(field="email", pattern=r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
+        data = {"email": "test@example.com"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_invalid_pattern(self) -> None:
+        """Value not matching pattern returns error."""
+        rule = PatternRule(field="email", pattern=r"^[\w.+-]+@[\w-]+\.[\w.-]+$")
+        data = {"email": "not-an-email"}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "email" in errors[0].field
+
+    def test_missing_field_skipped(self) -> None:
+        """Missing field is skipped."""
+        rule = PatternRule(field="email", pattern=r".*")
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_empty_value_skipped(self) -> None:
+        """Empty string is skipped."""
+        rule = PatternRule(field="email", pattern=r".*@.*")
+        data = {"email": ""}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+
+class TestNumericRangeRule:
+    """Tests for NumericRangeRule."""
+
+    def test_value_in_range(self) -> None:
+        """Value within range passes."""
+        rule = NumericRangeRule(field="latitude", minimum=-90, maximum=90)
+        data = {"latitude": 45.5}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_value_below_minimum(self) -> None:
+        """Value below minimum returns error."""
+        rule = NumericRangeRule(field="latitude", minimum=-90, maximum=90)
+        data = {"latitude": -100}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert ">=" in errors[0].message
+
+    def test_value_above_maximum(self) -> None:
+        """Value above maximum returns error."""
+        rule = NumericRangeRule(field="latitude", minimum=-90, maximum=90)
+        data = {"latitude": 100}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "<=" in errors[0].message
+
+    def test_invalid_type(self) -> None:
+        """Non-numeric value returns error."""
+        rule = NumericRangeRule(field="latitude", minimum=-90, maximum=90)
+        data = {"latitude": "not-a-number"}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "number" in errors[0].message.lower()
+
+    def test_missing_field_skipped(self) -> None:
+        """Missing field is skipped."""
+        rule = NumericRangeRule(field="latitude", minimum=-90, maximum=90)
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_boundary_values(self) -> None:
+        """Boundary values pass."""
+        rule = NumericRangeRule(field="value", minimum=0, maximum=100)
+        assert len(rule.validate({"value": 0})) == 0
+        assert len(rule.validate({"value": 100})) == 0
+
+
+class TestEnumRule:
+    """Tests for EnumRule."""
+
+    def test_valid_value(self) -> None:
+        """Value in allowed set passes."""
+        rule = EnumRule(field="status", allowed_values=["active", "inactive", "pending"])
+        data = {"status": "active"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_invalid_value(self) -> None:
+        """Value not in allowed set returns error."""
+        rule = EnumRule(field="status", allowed_values=["active", "inactive"])
+        data = {"status": "unknown"}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "must be one of" in errors[0].message
+
+    def test_missing_field_skipped(self) -> None:
+        """Missing field is skipped."""
+        rule = EnumRule(field="status", allowed_values=["active"])
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_empty_value_skipped(self) -> None:
+        """Empty string is skipped."""
+        rule = EnumRule(field="status", allowed_values=["active"])
+        data = {"status": ""}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+
+class TestCardinalityRule:
+    """Tests for CardinalityRule."""
+
+    def test_list_meets_minimum(self) -> None:
+        """List with enough items passes."""
+        rule = CardinalityRule(field="contacts", min_items=1)
+        data = {"contacts": [{"name": "John"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_list_below_minimum(self) -> None:
+        """List with too few items returns error."""
+        rule = CardinalityRule(field="contacts", min_items=2)
+        data = {"contacts": [{"name": "John"}]}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "at least 2" in errors[0].message
+
+    def test_list_above_maximum(self) -> None:
+        """List with too many items returns error."""
+        rule = CardinalityRule(field="tags", max_items=3)
+        data = {"tags": ["a", "b", "c", "d"]}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "at most 3" in errors[0].message
+
+    def test_missing_required_list(self) -> None:
+        """Missing required list field returns error."""
+        rule = CardinalityRule(field="contacts", min_items=1)
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+
+    def test_none_optional_list(self) -> None:
+        """None value for optional list passes."""
+        rule = CardinalityRule(field="tags", min_items=0)
+        data = {"tags": None}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_non_list_skipped(self) -> None:
+        """Non-list value is skipped."""
+        rule = CardinalityRule(field="contacts", min_items=1)
+        data = {"contacts": "not-a-list"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+
+class TestConditionalRule:
+    """Tests for ConditionalRule."""
+
+    def test_or_both_present(self) -> None:
+        """OR condition with both fields present passes."""
+        rule = ConditionalRule(condition="name OR email")
+        data = {"name": "John", "email": "john@test.com"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_or_one_present(self) -> None:
+        """OR condition with one field present passes."""
+        rule = ConditionalRule(condition="name OR email")
+        data = {"name": "John"}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_or_none_present(self) -> None:
+        """OR condition with no fields present returns error."""
+        rule = ConditionalRule(condition="name OR email")
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+
+    def test_and_both_present(self) -> None:
+        """AND condition with both fields present passes."""
+        rule = ConditionalRule(condition="latitude AND longitude")
+        data = {"latitude": 45.0, "longitude": -90.0}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_and_one_missing(self) -> None:
+        """AND condition with one field missing returns error."""
+        rule = ConditionalRule(condition="latitude AND longitude")
+        data = {"latitude": 45.0}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+
+
+class TestCoordinatePairRule:
+    """Tests for CoordinatePairRule."""
+
+    def test_both_coordinates_present(self) -> None:
+        """Both latitude and longitude present passes."""
+        rule = CoordinatePairRule(lat_field="latitude", lon_field="longitude")
+        data = {"latitude": 45.0, "longitude": -90.0}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_neither_coordinate_present(self) -> None:
+        """Neither coordinate present passes."""
+        rule = CoordinatePairRule(lat_field="latitude", lon_field="longitude")
+        data = {}
+        errors = rule.validate(data)
+        assert len(errors) == 0
+
+    def test_only_latitude(self) -> None:
+        """Only latitude present returns error."""
+        rule = CoordinatePairRule(lat_field="latitude", lon_field="longitude")
+        data = {"latitude": 45.0}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "longitude" in errors[0].message
+
+    def test_only_longitude(self) -> None:
+        """Only longitude present returns error."""
+        rule = CoordinatePairRule(lat_field="latitude", lon_field="longitude")
+        data = {"longitude": -90.0}
+        errors = rule.validate(data)
+        assert len(errors) == 1
+        assert "latitude" in errors[0].message
 
 
 class TestValidationError:
