@@ -14,6 +14,8 @@ from isatools import isajson, isatab
 from isatools.model import Investigation as ISAInvestigation
 from isatools.model import Study as ISAStudy
 
+__all__ = ["ImportResult", "ISAImporter"]
+
 
 @dataclass
 class ImportResult:
@@ -117,7 +119,6 @@ class ISAImporter:
             ImportResult with all converted entities.
         """
         result = ImportResult(investigation={})
-        warnings = []
 
         # Convert investigation
         inv_data = {}
@@ -156,7 +157,6 @@ class ISAImporter:
                 if person not in result.persons:
                     result.persons.append(person)
 
-        result.warnings = warnings
         return result
 
     def _convert_study(
