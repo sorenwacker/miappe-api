@@ -1,5 +1,5 @@
 [project]
-name = "miappe-api"
+name = "metaseed"
 version = "0.1.0"
 description = "Schema-driven API for MIAPPE-compliant phenotyping metadata"
 readme = "README.md"
@@ -46,14 +46,14 @@ docs = [
 ]
 
 [project.scripts]
-miappe = "miappe_api.cli:app"
+metaseed = "metaseed.cli:app"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/miappe_api"]
+packages = ["src/metaseed"]
 
 [tool.ruff]
 target-version = "py311"
@@ -79,7 +79,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["miappe_api"]
+known-first-party = ["metaseed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -91,7 +91,7 @@ markers = [
 ]
 
 [tool.coverage.run]
-source = ["src/miappe_api"]
+source = ["src/metaseed"]
 branch = true
 
 [tool.coverage.report]

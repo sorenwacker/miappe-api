@@ -5,8 +5,8 @@ import datetime
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from miappe_api.models.factory import create_model_from_spec
-from miappe_api.specs.schema import Constraints, EntitySpec, FieldSpec, FieldType
+from metaseed.models.factory import create_model_from_spec
+from metaseed.specs.schema import Constraints, EntitySpec, FieldSpec, FieldType
 
 
 class TestCreateModelFromSpec:
@@ -288,7 +288,7 @@ class TestCreateModelFromSpec:
 
     def test_nested_models_in_constructor(self) -> None:
         """Models can contain nested models in constructor."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")
@@ -312,7 +312,7 @@ class TestCreateModelFromSpec:
 
     def test_list_fields_default_to_empty_list(self) -> None:
         """List fields default to empty list for easier use."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         inv = Investigation(unique_id="INV-001", title="Test")
@@ -323,7 +323,7 @@ class TestCreateModelFromSpec:
 
     def test_list_fields_support_append(self) -> None:
         """List fields support standard Python operations."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")
@@ -338,7 +338,7 @@ class TestCreateModelFromSpec:
 
     def test_deeply_nested_models(self) -> None:
         """Models support deep nesting following PPEO hierarchy."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")

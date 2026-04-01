@@ -1,6 +1,6 @@
 """Test version is accessible."""
 
-from miappe_api import __version__
+from metaseed import __version__
 
 
 def test_version_exists() -> None:

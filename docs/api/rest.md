@@ -1,15 +1,15 @@
 # REST API Reference
 
-MIAPPE-API provides a REST API built with [FastAPI](https://fastapi.tiangolo.com/).
+Metaseed provides a REST API built with [FastAPI](https://fastapi.tiangolo.com/).
 
 ## Starting the Server
 
 ```bash
 # Development server with auto-reload
-uv run uvicorn miappe_api.api:app --reload
+uv run uvicorn metaseed.api:app --reload
 
 # Production server
-uv run uvicorn miappe_api.api:app --host 0.0.0.0 --port 8000
+uv run uvicorn metaseed.api:app --host 0.0.0.0 --port 8000
 ```
 
 ## API Documentation

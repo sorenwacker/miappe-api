@@ -1,10 +1,10 @@
-# MIAPPE-API
+# Metaseed
 
 Schema-driven API for MIAPPE-compliant phenotyping metadata.
 
 ## Overview
 
-MIAPPE-API provides tools for creating, editing, and validating experimental metadata following MIAPPE (Minimum Information About Plant Phenotyping Experiments) standards.
+Metaseed provides tools for creating, editing, and validating experimental metadata following MIAPPE (Minimum Information About Plant Phenotyping Experiments) standards.
 
 ### Features
 

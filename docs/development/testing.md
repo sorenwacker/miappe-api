@@ -1,6 +1,6 @@
 # Testing
 
-MIAPPE-API uses pytest for testing with a multi-layered approach covering unit tests, integration tests, and end-to-end UI tests.
+Metaseed uses pytest for testing with a multi-layered approach covering unit tests, integration tests, and end-to-end UI tests.
 
 ## Running Tests
 
@@ -9,7 +9,7 @@ MIAPPE-API uses pytest for testing with a multi-layered approach covering unit t
 uv run pytest
 
 # Run tests with coverage
-uv run pytest --cov=miappe_api
+uv run pytest --cov=metaseed
 
 # Run only UI tests
 uv run pytest tests/test_ui/ -v
@@ -62,7 +62,7 @@ Fast, headless tests using FastAPI's TestClient to verify route behavior and HTM
 
 ```python
 from fastapi.testclient import TestClient
-from miappe_api.ui.routes import AppState, create_app
+from metaseed.ui.routes import AppState, create_app
 
 def test_create_entity(client):
     response = client.post(
@@ -103,9 +103,9 @@ Tests use a module-scoped server fixture that starts uvicorn on port 8081:
 ```python
 @pytest.fixture(scope="module")
 def server():
-    """Start the MIAPPE-API server for testing."""
+    """Start the Metaseed server for testing."""
     proc = subprocess.Popen(
-        ["uv", "run", "uvicorn", "miappe_api.ui.routes:app", "--port", "8081"],
+        ["uv", "run", "uvicorn", "metaseed.ui.routes:app", "--port", "8081"],
         ...
     )
     # Wait for server to be ready

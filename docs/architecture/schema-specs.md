@@ -117,7 +117,7 @@ DataFile (measurement data)
 
 This chain enables traceability from raw data back to the original source material.
 
-Version-specific specs are stored under `src/miappe_api/specs/`.
+Version-specific specs are stored under `src/metaseed/specs/`.
 
 ## See Also
 

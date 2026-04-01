@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from miappe_api.models import get_model
-from miappe_api.storage.json_backend import JsonStorage
+from metaseed.models import get_model
+from metaseed.storage.json_backend import JsonStorage
 
 
 class TestJsonStorage:
@@ -102,7 +102,7 @@ class TestJsonStorage:
         tmp_path: Path,
     ) -> None:
         """Loading nonexistent file raises error."""
-        from miappe_api.storage.base import StorageError
+        from metaseed.storage.base import StorageError
 
         file_path = tmp_path / "nonexistent.json"
         with pytest.raises(StorageError):
@@ -115,7 +115,7 @@ class TestJsonStorage:
         tmp_path: Path,
     ) -> None:
         """Loading invalid JSON raises error."""
-        from miappe_api.storage.base import StorageError
+        from metaseed.storage.base import StorageError
 
         file_path = tmp_path / "invalid.json"
         file_path.write_text("not valid json {")

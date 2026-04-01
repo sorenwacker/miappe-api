@@ -1,15 +1,15 @@
 # Quick Start
 
-This guide walks through basic usage of MIAPPE-API.
+This guide walks through basic usage of Metaseed.
 
 ## CLI Usage
 
-The `miappe` command provides access to all functionality.
+The `metaseed` command provides access to all functionality.
 
 ### List available entities
 
 ```bash
-uv run miappe entities
+uv run metaseed entities
 ```
 
 Output:
@@ -34,7 +34,7 @@ Available entities (MIAPPE v1.1):
 ### Generate a template
 
 ```bash
-uv run miappe template investigation -o my_investigation.yaml
+uv run metaseed template investigation -o my_investigation.yaml
 ```
 
 This creates a template file with required fields filled in:
@@ -47,7 +47,7 @@ title: <title>
 ### Validate a file
 
 ```bash
-uv run miappe validate my_investigation.yaml --entity investigation
+uv run metaseed validate my_investigation.yaml --entity investigation
 ```
 
 If validation passes:
@@ -64,7 +64,7 @@ Validation failed with 1 error(s):
 ### Convert between formats
 
 ```bash
-uv run miappe convert data.yaml data.json --entity investigation
+uv run metaseed convert data.yaml data.json --entity investigation
 ```
 
 ## REST API
@@ -72,7 +72,7 @@ uv run miappe convert data.yaml data.json --entity investigation
 Start the development server:
 
 ```bash
-uv run uvicorn miappe_api.api:app --reload
+uv run uvicorn metaseed.api:app --reload
 ```
 
 The API will be available at `http://localhost:8000`.
@@ -151,7 +151,7 @@ Response:
 The facade pattern provides a fluent API for working with MIAPPE and ISA entities:
 
 ```python
-from miappe_api import miappe, isa
+from metaseed import miappe, isa
 
 # Create a MIAPPE facade
 m = miappe()
@@ -193,8 +193,8 @@ sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source]
 For lower-level control, use `get_model`:
 
 ```python
-from miappe_api.models import get_model
-from miappe_api.validators import validate
+from metaseed.models import get_model
+from metaseed.validators import validate
 
 # Get Investigation model
 Investigation = get_model("Investigation", version="1.1")
@@ -220,7 +220,7 @@ if not errors:
 Launch the visual metadata editor:
 
 ```bash
-miappe ui
+metaseed ui
 ```
 
 Open http://127.0.0.1:8080 in your browser to:

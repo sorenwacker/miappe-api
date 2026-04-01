@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from miappe_api.specs.loader import SpecLoader, SpecLoadError
-from miappe_api.specs.schema import EntitySpec, FieldType
+from metaseed.specs.loader import SpecLoader, SpecLoadError
+from metaseed.specs.schema import EntitySpec, FieldType
 
 
 class TestSpecLoader:

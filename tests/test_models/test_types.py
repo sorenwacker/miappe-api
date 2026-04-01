@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from miappe_api.models.types import OntologyTerm
+from metaseed.models.types import OntologyTerm
 
 
 class TestOntologyTerm:

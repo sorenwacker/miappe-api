@@ -4,7 +4,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from miappe_api.cli import app
+from metaseed.cli import app
 
 runner = CliRunner()
 
@@ -16,7 +16,7 @@ class TestVersionCommand:
         """Version command displays version."""
         result = runner.invoke(app, ["version"])
         assert result.exit_code == 0
-        assert "miappe-api" in result.stdout
+        assert "metaseed" in result.stdout
         assert "0.1.0" in result.stdout
 
 

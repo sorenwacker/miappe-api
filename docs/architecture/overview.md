@@ -1,6 +1,6 @@
 # Architecture Overview
 
-MIAPPE-API follows a schema-driven architecture where YAML specifications define the metadata structure, and Pydantic models are generated dynamically at runtime.
+Metaseed follows a schema-driven architecture where YAML specifications define the metadata structure, and Pydantic models are generated dynamically at runtime.
 
 ## System Components
 

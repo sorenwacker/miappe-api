@@ -2,7 +2,7 @@
 
 import datetime
 
-from miappe_api.validators.rules import (
+from metaseed.validators.rules import (
     CardinalityRule,
     ConditionalRule,
     CoordinatePairRule,
@@ -129,7 +129,7 @@ class TestEntityReferenceRule:
 
     def test_valid_single_reference(self) -> None:
         """Valid entity reference passes."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         # Available entities by their unique_id
         available_locations = {"LOC-001", "LOC-002"}
@@ -145,7 +145,7 @@ class TestEntityReferenceRule:
 
     def test_invalid_reference(self) -> None:
         """Invalid entity reference returns error."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         available_locations = {"LOC-001", "LOC-002"}
 
@@ -161,7 +161,7 @@ class TestEntityReferenceRule:
 
     def test_missing_reference_skipped(self) -> None:
         """Missing reference field is skipped."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         rule = EntityReferenceRule(
             field="geographic_location",
@@ -174,7 +174,7 @@ class TestEntityReferenceRule:
 
     def test_none_reference_skipped(self) -> None:
         """None reference is skipped."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         rule = EntityReferenceRule(
             field="geographic_location",
@@ -187,7 +187,7 @@ class TestEntityReferenceRule:
 
     def test_list_references_all_valid(self) -> None:
         """All valid list references pass."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         available_sources = {"SRC-001", "SRC-002", "SRC-003"}
 
@@ -203,7 +203,7 @@ class TestEntityReferenceRule:
 
     def test_list_references_with_invalid(self) -> None:
         """Invalid reference in list returns error."""
-        from miappe_api.validators.rules import EntityReferenceRule
+        from metaseed.validators.rules import EntityReferenceRule
 
         available_sources = {"SRC-001", "SRC-002"}
 

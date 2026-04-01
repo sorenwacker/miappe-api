@@ -56,7 +56,7 @@ docs-serve:
 	uv run mkdocs serve
 
 ui:
-	uv run miappe ui
+	uv run metaseed ui
 
 clean:
 	rm -rf .pytest_cache .coverage htmlcov site build dist *.egg-info

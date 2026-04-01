@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from miappe_api.models import get_model
-from miappe_api.storage.yaml_backend import YamlStorage
+from metaseed.models import get_model
+from metaseed.storage.yaml_backend import YamlStorage
 
 
 class TestYamlStorage:
@@ -106,7 +106,7 @@ class TestYamlStorage:
         tmp_path: Path,
     ) -> None:
         """Loading nonexistent file raises error."""
-        from miappe_api.storage.base import StorageError
+        from metaseed.storage.base import StorageError
 
         file_path = tmp_path / "nonexistent.yaml"
         with pytest.raises(StorageError):
@@ -119,7 +119,7 @@ class TestYamlStorage:
         tmp_path: Path,
     ) -> None:
         """Loading invalid YAML raises error."""
-        from miappe_api.storage.base import StorageError
+        from metaseed.storage.base import StorageError
 
         file_path = tmp_path / "invalid.yaml"
         file_path.write_text("key: value\n  invalid indent")

@@ -213,7 +213,7 @@ When converting between ISA and MIAPPE:
 ## Combined Profile Usage
 
 ```python
-from miappe_api.facade import ProfileFacade
+from metaseed.facade import ProfileFacade
 
 # Load combined profile
 combined = ProfileFacade("combined", "1.0")

@@ -1,6 +1,6 @@
 # CLI Reference
 
-MIAPPE-API provides a command-line interface built with [Typer](https://typer.tiangolo.com/).
+Metaseed provides a command-line interface built with [Typer](https://typer.tiangolo.com/).
 
 ## Installation
 
@@ -8,7 +8,7 @@ The CLI is available after installing the package:
 
 ```bash
 uv sync
-uv run miappe --help
+uv run metaseed --help
 ```
 
 ## Commands
@@ -18,7 +18,7 @@ uv run miappe --help
 Show the package version:
 
 ```bash
-miappe version
+metaseed version
 ```
 
 ### entities
@@ -26,7 +26,7 @@ miappe version
 List available MIAPPE entities for a version:
 
 ```bash
-miappe entities --version 1.1
+metaseed entities --version 1.1
 ```
 
 ### validate
@@ -34,7 +34,7 @@ miappe entities --version 1.1
 Validate a MIAPPE metadata file:
 
 ```bash
-miappe validate <file> --entity investigation --version 1.1
+metaseed validate <file> --entity investigation --version 1.1
 ```
 
 ### template
@@ -42,7 +42,7 @@ miappe validate <file> --entity investigation --version 1.1
 Generate an empty template for an entity:
 
 ```bash
-miappe template investigation --output my_investigation.yaml --format yaml
+metaseed template investigation --output my_investigation.yaml --format yaml
 ```
 
 Options:
@@ -58,7 +58,7 @@ Options:
 Convert between YAML and JSON formats:
 
 ```bash
-miappe convert input.yaml output.json --entity investigation
+metaseed convert input.yaml output.json --entity investigation
 ```
 
 The format is determined by file extension (`.yaml`, `.yml`, or `.json`).
@@ -68,7 +68,7 @@ The format is determined by file extension (`.yaml`, `.yml`, or `.json`).
 Launch the NiceGUI web interface:
 
 ```bash
-miappe ui --host 127.0.0.1 --port 8080
+metaseed ui --host 127.0.0.1 --port 8080
 ```
 
 Options:
@@ -98,5 +98,5 @@ The web interface provides:
 The CLI reads configuration from:
 
 1. Command-line arguments
-2. Environment variables (prefixed with `MIAPPE_`)
-3. Configuration file (`miappe.yaml` in current directory)
+2. Environment variables (prefixed with `METASEED_`)
+3. Configuration file (`metaseed.yaml` in current directory)

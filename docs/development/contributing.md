@@ -1,6 +1,6 @@
 # Contributing
 
-Guidelines for contributing to MIAPPE-API.
+Guidelines for contributing to Metaseed.
 
 ## Development Setup
 
@@ -8,7 +8,7 @@ Guidelines for contributing to MIAPPE-API.
 
     ```bash
     git clone <repository-url>
-    cd miappe-api
+    cd metaseed
     ```
 
 2. Install dependencies and pre-commit hooks:
@@ -81,8 +81,8 @@ make docs
 ## Project Structure
 
 ```
-miappe-api/
-├── src/miappe_api/     # Main package
+metaseed/
+├── src/metaseed/       # Main package
 │   ├── api/            # FastAPI routes
 │   ├── cli/            # Typer commands
 │   ├── core/           # Shared utilities

@@ -14,7 +14,7 @@ def load_spec_examples(profile: str = "miappe") -> dict[str, dict]:
     Returns:
         Dictionary mapping entity names to their example values.
     """
-    spec_dir = Path(__file__).parent.parent.parent / "src" / "miappe_api" / "specs"
+    spec_dir = Path(__file__).parent.parent.parent / "src" / "metaseed" / "specs"
     spec_file = spec_dir / "miappe_v1.1.yaml" if profile == "miappe" else spec_dir / "isa_v1.0.yaml"
 
     with open(spec_file) as f:

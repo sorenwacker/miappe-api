@@ -6,7 +6,7 @@ Tests use FastAPI TestClient to verify route behavior.
 import pytest
 from fastapi.testclient import TestClient
 
-from miappe_api.ui.routes import AppState, create_app
+from metaseed.ui.routes import AppState, create_app
 
 
 @pytest.fixture

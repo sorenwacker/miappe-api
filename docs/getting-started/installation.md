@@ -10,7 +10,7 @@
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd miappe-api
+cd metaseed
 
 # Install with UV
 make install
@@ -33,7 +33,7 @@ This includes:
 
 ```bash
 # Check the CLI is available
-uv run miappe --version
+uv run metaseed --version
 
 # Run the test suite
 make test

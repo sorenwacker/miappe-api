@@ -27,7 +27,7 @@ Rather than manually defining Pydantic models for each MIAPPE entity, the factor
 ## Usage
 
 ```python
-from miappe_api.models import get_model
+from metaseed.models import get_model
 
 # Get model for Investigation entity (MIAPPE 1.1)
 Investigation = get_model("Investigation", version="1.1")

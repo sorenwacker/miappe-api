@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from miappe_api.api import app
+from metaseed.api import app
 
 client = TestClient(app)
 

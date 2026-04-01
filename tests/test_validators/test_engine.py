@@ -2,9 +2,9 @@
 
 import datetime
 
-from miappe_api.validators import validate
-from miappe_api.validators.engine import ValidationEngine
-from miappe_api.validators.rules import (
+from metaseed.validators import validate
+from metaseed.validators.engine import ValidationEngine
+from metaseed.validators.rules import (
     DateRangeRule,
     RequiredFieldsRule,
 )
@@ -116,7 +116,7 @@ class TestValidateFunction:
 
     def test_validate_model_instance(self) -> None:
         """Validate a Pydantic model instance directly."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Person = get_model("Person")
@@ -134,7 +134,7 @@ class TestValidateFunction:
 
     def test_validate_cascading(self) -> None:
         """Cascading validation checks nested entities."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")
@@ -163,7 +163,7 @@ class TestValidateFunction:
 
     def test_validate_no_cascade(self) -> None:
         """Without cascade, only validates the top-level entity."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Investigation = get_model("Investigation")
         Study = get_model("Study")

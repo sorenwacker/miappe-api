@@ -2,7 +2,7 @@
 
 import pytest
 
-from miappe_api.facade import EntityHelper, ProfileFacade, isa, miappe
+from metaseed.facade import EntityHelper, ProfileFacade, isa, miappe
 
 
 class TestProfileFacade:
@@ -379,7 +379,7 @@ class TestProfileFacadeOutput:
 
     def test_invalid_profile_raises(self) -> None:
         """Creating facade with invalid profile raises."""
-        from miappe_api.specs.loader import SpecLoadError
+        from metaseed.specs.loader import SpecLoadError
 
         with pytest.raises(SpecLoadError):
             ProfileFacade("nonexistent_profile", "1.0")

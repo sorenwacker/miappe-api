@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from miappe_api.importers import ISAImporter
+from metaseed.importers import ISAImporter
 
 
 class TestISAImporter:
@@ -92,11 +92,11 @@ class TestISAJSONImport(TestISAImporter):
     def test_import_json_publications_mapped(
         self, importer: ISAImporter, isa_json_path: Path
     ) -> None:
-        """Publications are mapped to associated_publication."""
+        """Publications are mapped to associated_publications."""
         result = importer.import_json(isa_json_path)
 
-        assert "associated_publication" in result.investigation
-        assert any("doi" in pub for pub in result.investigation["associated_publication"])
+        assert "associated_publications" in result.investigation
+        assert any("doi" in pub for pub in result.investigation["associated_publications"])
 
     def test_import_json_nonexistent_raises(self, importer: ISAImporter) -> None:
         """Importing nonexistent file raises FileNotFoundError."""

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from miappe_api.specs.schema import (
+from metaseed.specs.schema import (
     Constraints,
     EntitySpec,
     FieldSpec,

@@ -2,8 +2,8 @@
 
 import pytest
 
-from miappe_api.models import get_model
-from miappe_api.specs.loader import SpecLoader
+from metaseed.models import get_model
+from metaseed.specs.loader import SpecLoader
 
 MIAPPE_V11_ENTITIES = [
     "investigation",
@@ -196,7 +196,7 @@ class TestMIAPPEEntityReferences:
 
     def test_study_geographic_location_references_location(self, miappe_loader: SpecLoader) -> None:
         """Study.geographic_location references Location entity."""
-        from miappe_api.specs.schema import FieldType
+        from metaseed.specs.schema import FieldType
 
         spec = miappe_loader.load_entity("Study", version="1.1")
 
@@ -211,7 +211,7 @@ class TestMIAPPEEntityReferences:
         self, miappe_loader: SpecLoader
     ) -> None:
         """BiologicalMaterial.material_source references MaterialSource entity."""
-        from miappe_api.specs.schema import FieldType
+        from metaseed.specs.schema import FieldType
 
         spec = miappe_loader.load_entity("BiologicalMaterial", version="1.1")
 

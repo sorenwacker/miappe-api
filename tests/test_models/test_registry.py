@@ -3,7 +3,7 @@
 import pytest
 from pydantic import BaseModel
 
-from miappe_api.models.registry import ModelNotFoundError, ModelRegistry
+from metaseed.models.registry import ModelNotFoundError, ModelRegistry
 
 
 class TestModelRegistry:
@@ -118,7 +118,7 @@ class TestGlobalRegistry:
 
     def test_get_model_loads_from_spec(self) -> None:
         """get_model loads model from spec if not in registry."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         # Should load Investigation model from spec
         Investigation = get_model("Investigation", version="1.1")
@@ -132,7 +132,7 @@ class TestGlobalRegistry:
 
     def test_get_model_cached(self) -> None:
         """get_model returns cached model on subsequent calls."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         Model1 = get_model("Investigation", version="1.1")
         Model2 = get_model("Investigation", version="1.1")
@@ -141,15 +141,15 @@ class TestGlobalRegistry:
 
     def test_get_model_nonexistent_entity(self) -> None:
         """get_model raises error for nonexistent entity."""
-        from miappe_api.models import get_model
-        from miappe_api.specs.loader import SpecLoadError
+        from metaseed.models import get_model
+        from metaseed.specs.loader import SpecLoadError
 
         with pytest.raises(SpecLoadError):
             get_model("NonExistent", version="1.1")
 
     def test_get_model_camel_case_names(self) -> None:
         """get_model handles CamelCase entity names correctly."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         # Multi-word entity names should work
         BiologicalMaterial = get_model("BiologicalMaterial", version="1.1")
@@ -173,7 +173,7 @@ class TestGlobalRegistry:
 
     def test_get_model_snake_case_names(self) -> None:
         """get_model also handles snake_case entity names."""
-        from miappe_api.models import get_model
+        from metaseed.models import get_model
 
         # snake_case should also work
         model = get_model("biological_material", version="1.1")
