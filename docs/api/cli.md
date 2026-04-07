@@ -65,7 +65,7 @@ The format is determined by file extension (`.yaml`, `.yml`, or `.json`).
 
 ### ui
 
-Launch the NiceGUI web interface:
+Launch the web interface:
 
 ```bash
 metaseed ui --host 127.0.0.1 --port 8080

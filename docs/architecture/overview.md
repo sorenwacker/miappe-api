@@ -8,7 +8,7 @@ Metaseed follows a schema-driven architecture where YAML specifications define t
 ┌─────────────────────────────────────────────────────────────┐
 │                        Interfaces                           │
 │  ┌───────────┐  ┌───────────┐  ┌─────────────────────────┐ │
-│  │CLI (Typer)│  │Web (Nice) │  │    REST API (FastAPI)   │ │
+│  │CLI (Typer)│  │Web (HTMX) │  │    REST API (FastAPI)   │ │
 │  └───────────┘  └───────────┘  └─────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -72,7 +72,7 @@ A fluent API layer providing intuitive access to entity helpers:
 ### Interfaces
 
 - **CLI**: Command-line interface for batch operations and scripting
-- **Web UI**: NiceGUI-based visual editor with dynamic forms
+- **Web UI**: HTMX-based visual editor with dynamic forms
 - **REST API**: HTTP endpoints for integration with other systems
 
 ## Design Principles
