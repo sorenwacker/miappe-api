@@ -72,17 +72,17 @@ Run `make help` to see all available targets.
 ## Architecture
 
 ```
-metaseed/
-├── src/metaseed/
-│   ├── specs/        # YAML schema specifications
-│   ├── models/       # Generated Pydantic models
-│   ├── validators/   # Validation logic
-│   ├── storage/      # Persistence layer
-│   ├── api/          # FastAPI REST endpoints
-│   ├── cli/          # Typer CLI commands
-│   └── core/         # Shared utilities
-├── tests/            # Test suite
-└── docs/             # MkDocs documentation
+src/metaseed/
+├── api/          # FastAPI REST endpoints
+├── cli/          # Typer CLI commands
+├── core/         # Shared utilities
+├── importers/    # ISA-Tab and other format importers
+├── models/       # Generated Pydantic models
+├── profiles/     # User profile configurations
+├── specs/        # YAML schema specifications
+├── storage/      # Persistence layer
+├── ui/           # HTMX web interface
+└── validators/   # Validation logic
 ```
 
 ## License
