@@ -1,4 +1,47 @@
+{% if tree_nodes %}
+<div class="entity-list">
+    <h2>Entities</h2>
+    {% for node in tree_nodes %}
+    <div class="entity-item">
+        <button class="btn btn-entity"
+                hx-get="/form/{{ node.entity_type }}/{{ node.id }}"
+                hx-target="#main"
+                hx-swap="innerHTML">
+            <span class="entity-type">{{ node.entity_type }}</span>
+            <span class="entity-label">{{ node.label }}</span>
+        </button>
+        <button class="btn btn-delete"
+                hx-delete="/entity/{{ node.id }}"
+                hx-target="#main"
+                hx-swap="innerHTML"
+                hx-confirm="Delete '{{ node.label }}'?">
+            &times;
+        </button>
+    </div>
+    {% if node.children %}
+    <div class="entity-children">
+        {% for child in node.children %}
+        <div class="entity-item child">
+            <span class="entity-type">{{ child.entity_type }}</span>
+            <span class="entity-label">{{ child.label }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endfor %}
+</div>
+{% else %}
 <div class="welcome">
     <h2>Structured Metadata</h2>
     <p>Create and manage structured metadata from schema specifications. Use the buttons in the header to create new entries or import existing data.</p>
 </div>
+{% endif %}
+
+{% if editing_node_id and editing_node_type %}
+<script>
+    // Auto-load the form for the editing node
+    document.addEventListener('DOMContentLoaded', function() {
+        htmx.ajax('GET', '/form/{{ editing_node_type }}/{{ editing_node_id }}', {target: '#main', swap: 'innerHTML'});
+    });
+</script>
+{% endif %}

@@ -15,7 +15,7 @@ from metaseed.validators import validate as validate_data
 
 app = typer.Typer(
     name="metaseed",
-    help="Schema-driven CLI for MIAPPE-compliant phenotyping metadata.",
+    help="Tools for creating, editing, and validating experimental metadata following MIAPPE standards.",
     no_args_is_help=True,
 )
 

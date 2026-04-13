@@ -1,5 +1,5 @@
 site_name: Metaseed
-site_description: Schema-driven API for MIAPPE-compliant phenotyping metadata
+site_description: Tools for creating, editing, and validating experimental metadata following MIAPPE standards
 
 theme:
   name: material
@@ -21,6 +21,12 @@ theme:
     - navigation.sections
     - content.code.copy
 
+plugins:
+  - search
+  - panzoom:
+      full_screen: true
+      key: ctrl
+
 markdown_extensions:
   - admonition
   - pymdownx.highlight:
@@ -41,17 +47,19 @@ nav:
   - Getting Started:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quickstart.md
+  - Profiles:
+      - ISA: profiles/isa.md
+      - MIAPPE: profiles/miappe.md
+      - Combined: profiles/combined.md
+  - Discussion:
+      - Comparison: discussion/comparison.md
   - Architecture:
       - Overview: architecture/overview.md
-      - ISA: architecture/isa.md
-      - MIAPPE: architecture/miappe.md
-      - Comparison: architecture/comparison.md
-      - Combined: architecture/combined.md
-      - Schema Specs: architecture/schema-specs.md
       - Model Factory: architecture/model-factory.md
   - API Reference:
       - CLI: api/cli.md
       - REST API: api/rest.md
+      - Schema Specs: api/schema-specs.md
   - Development:
       - Contributing: development/contributing.md
       - Testing: development/testing.md

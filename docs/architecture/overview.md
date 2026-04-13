@@ -37,25 +37,6 @@ graph TB
 | **Web UI** | Visual editor (HTMX) |
 | **REST API** | HTTP endpoints (FastAPI) |
 
-## Available Profiles
-
-| Profile | Versions | Description |
-|---------|----------|-------------|
-| [`isa`](isa.md) | 1.0 | Life science experiments (ISA framework) |
-| [`miappe`](miappe.md) | 1.1 | Plant phenotyping (MIAPPE standard) |
-| [`isa-miappe-combined`](combined.md) | 1.0, 2.0 | Unified ISA + MIAPPE model |
-
-See [Comparison](comparison.md) for differences between ISA and MIAPPE.
-
-```python
-from metaseed import miappe, isa
-from metaseed.facade import ProfileFacade
-
-m = miappe()                                    # MIAPPE v1.1
-i = isa()                                       # ISA v1.0
-combined = ProfileFacade("isa-miappe-combined", "2.0")
-```
-
 ## Design Principles
 
 1. **Schema-first**: Metadata structure defined in YAML specs

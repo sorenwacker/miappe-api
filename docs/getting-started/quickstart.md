@@ -2,80 +2,36 @@
 
 ## CLI
 
+The command-line interface provides tools for working with metadata files. You can list available entity types, generate empty templates, validate existing files, and convert between YAML and JSON formats.
+
 ```bash
-# List entities
 metaseed entities
-
-# Generate template
-metaseed template investigation -o my_investigation.yaml
-
-# Validate
-metaseed validate my_investigation.yaml --entity investigation
-
-# Convert formats
-metaseed convert data.yaml data.json --entity investigation
+metaseed template investigation
+metaseed validate data.yaml
+metaseed convert data.yaml data.json
 ```
 
 ## Python
 
-### Facade API (Recommended)
+The Python API follows a similar pattern to [isatools](https://github.com/ISA-tools/isa-api), using constructor-style entity creation with keyword arguments. Unlike isatools, Metaseed generates models dynamically from YAML specifications, which allows it to support multiple metadata standards with the same codebase.
 
 ```python
-from metaseed import miappe, isa
-from metaseed.facade import ProfileFacade
+from metaseed import miappe
 
-# MIAPPE
 m = miappe()
 inv = m.Investigation(unique_id="INV001", title="Drought study")
 study = m.Study(unique_id="STU001", title="Field trial")
 inv.studies.append(study)
-
-# ISA
-i = isa()
-source = i.Source(unique_id="SRC001", name="Patient 1")
-sample = i.Sample(unique_id="SAM001", name="Blood sample", derives_from=[source])
-
-# Combined (ISA + MIAPPE)
-combined = ProfileFacade("isa-miappe-combined", "2.0")
-protocol = combined.Protocol(name="RNA Extraction")
-material = combined.BiologicalMaterial(identifier="BM-001", organism="Zea mays")
 ```
 
-### Direct Model Access
-
-```python
-from metaseed.models import get_model
-from metaseed.validators import validate
-
-Investigation = get_model("Investigation", version="1.1")
-inv = Investigation(unique_id="INV001", title="My study")
-
-errors = validate(inv)
-```
-
-## REST API
-
-```bash
-# Start server
-uvicorn metaseed.api:app --reload
-
-# Health check
-curl http://localhost:8000/health
-
-# List entities
-curl http://localhost:8000/schemas/1.1
-
-# Validate
-curl -X POST http://localhost:8000/validate \
-  -H "Content-Type: application/json" \
-  -d '{"entity": "investigation", "version": "1.1", "data": {"unique_id": "INV001", "title": "Test"}}'
-```
+See [Profiles](../profiles/isa.md) for ISA and combined profiles.
 
 ## Web UI
 
+The web interface provides a visual editor for creating and editing metadata. Forms are generated dynamically from the schema specifications and validate input in real-time.
+
 ```bash
 metaseed ui
-# Open http://127.0.0.1:8080
 ```
 
-Features: entity browser, dynamic forms, nested entity editing, validation.
+This opens a browser at `http://127.0.0.1:8080`.

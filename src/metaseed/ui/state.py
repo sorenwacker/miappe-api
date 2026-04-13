@@ -14,6 +14,13 @@ if TYPE_CHECKING:
     from metaseed.facade import ProfileFacade
 
 
+def _get_default_profile() -> str:
+    """Get the default profile using ProfileFactory."""
+    from metaseed.profiles import ProfileFactory
+
+    return ProfileFactory().get_default_profile()
+
+
 @dataclass
 class TreeNode:
     """A node in the entity tree."""
@@ -72,7 +79,7 @@ class NestedEditContext:
 class AppState:
     """Server-side state for the UI."""
 
-    profile: str = "miappe"
+    profile: str = field(default_factory=_get_default_profile)
     facade: ProfileFacade | None = None
     entity_tree: list[TreeNode] = field(default_factory=list)
     nodes_by_id: dict[str, TreeNode] = field(default_factory=dict)

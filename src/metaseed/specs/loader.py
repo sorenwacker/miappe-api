@@ -251,14 +251,8 @@ class SpecLoader:
         profile_name = (profile or self._default_profile).lower()
         versions = set()
 
-        # Check for unified profile files
+        # Check for unified profile files (profile_v*.yaml pattern)
         for f in self._specs_dir.glob(f"{profile_name}_v*.yaml"):
-            match = re.search(r"v(\d+\.\d+)", f.name)
-            if match:
-                versions.add(match.group(1))
-
-        # Also check variant without underscore
-        for f in self._specs_dir.glob(f"{profile_name}*.yaml"):
             match = re.search(r"v(\d+\.\d+)", f.name)
             if match:
                 versions.add(match.group(1))
@@ -276,14 +270,14 @@ class SpecLoader:
         """List available profiles.
 
         Returns:
-            List of profile names (e.g., ["miappe", "isa"]).
+            List of profile names (e.g., ["miappe", "isa", "isa-miappe-combined"]).
         """
         profiles = set()
 
         # Find all profile files by pattern *_v*.yaml
         for f in self._specs_dir.glob("*_v*.yaml"):
-            # Extract profile name (before _v)
-            match = re.match(r"([a-z]+)_v\d+", f.stem)
+            # Extract profile name (before _v) - supports letters and hyphens
+            match = re.match(r"([a-z][a-z-]*)_v\d+", f.stem)
             if match:
                 profiles.add(match.group(1))
 

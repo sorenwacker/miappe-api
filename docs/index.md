@@ -1,22 +1,7 @@
 # Metaseed
 
-Schema-driven API for MIAPPE-compliant phenotyping metadata.
-
-## Overview
-
 Metaseed provides tools for creating, editing, and validating experimental metadata following MIAPPE (Minimum Information About Plant Phenotyping Experiments) standards.
 
-### Features
+Metadata structure is defined in YAML specification files, which are used to generate Pydantic models at runtime. This schema-driven approach allows the same codebase to support multiple metadata standards. Fields reference real ontologies (PPEO, ISA, PROV-O) for semantic interoperability.
 
-- **Schema-driven**: YAML specifications define metadata standards
-- **Ontology-backed**: References real ontologies (PPEO, ISA, PROV-O)
-- **Factory pattern**: Dynamically generates Pydantic models from specs
-- **Multiple interfaces**: REST API (FastAPI) and CLI (Typer)
-- **Validation**: Built-in validation against MIAPPE 1.1/1.2 standards
-
-## Supported Standards
-
-| Standard | Version | Status |
-|----------|---------|--------|
-| MIAPPE   | 1.1     | Planned |
-| MIAPPE   | 1.2     | Planned |
+The library can be used through a command-line interface, a web-based editor, or programmatically via Python.

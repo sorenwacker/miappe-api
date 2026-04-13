@@ -153,8 +153,12 @@ document.addEventListener('htmx:afterSwap', function(e) {
 });
 
 // Handle page refresh trigger (e.g., after import)
-document.body.addEventListener('refreshPage', function() {
-    window.location.reload();
+// HTMX triggers events via htmx:trigger on the requesting element
+document.body.addEventListener('htmx:afterRequest', function(e) {
+    var triggerHeader = e.detail.xhr && e.detail.xhr.getResponseHeader('HX-Trigger');
+    if (triggerHeader && triggerHeader.includes('refreshPage')) {
+        window.location.reload();
+    }
 });
 
 // Reset file input after upload (to allow re-uploading same file)
