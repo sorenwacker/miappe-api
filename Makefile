@@ -1,4 +1,4 @@
-.PHONY: install dev test test-ui test-cov demo test-export test-validation lint format docs docs-serve ui clean help
+.PHONY: install dev test test-ui test-cov demo test-export test-validation lint format docs docs-build ui clean help
 
 help:
 	@echo "Available targets:"
@@ -12,8 +12,8 @@ help:
 	@echo "  test-validation - Run validation UI tests (visible browser)"
 	@echo "  lint            - Run linter"
 	@echo "  format          - Format code"
-	@echo "  docs            - Build documentation"
-	@echo "  docs-serve      - Serve documentation locally"
+	@echo "  docs            - Serve documentation locally with hot reload"
+	@echo "  docs-build      - Build documentation"
 	@echo "  ui              - Launch web interface"
 	@echo "  clean           - Remove build artifacts"
 
@@ -50,10 +50,10 @@ format:
 	uv run ruff check --fix src tests
 
 docs:
-	uv run mkdocs build
+	uv run python -m mkdocs serve --livereload
 
-docs-serve:
-	uv run mkdocs serve
+docs-build:
+	uv run python -m mkdocs build
 
 ui:
 	uv run metaseed ui

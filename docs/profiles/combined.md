@@ -1,10 +1,14 @@
 # ISA-MIAPPE-Combined
 
-Unified model combining ISA and MIAPPE entities.
+The combined profile merges ISA and MIAPPE into a single coherent model. This is useful for plant science experiments that involve both phenotyping (field measurements, growth observations) and molecular assays (genomics, transcriptomics, metabolomics).
+
+Entities that exist in both standards (Investigation, Study, Person, Sample, Factor) are unified with a shared definition. ISA-specific entities (Assay, Protocol, Process) and MIAPPE-specific entities (BiologicalMaterial, ObservationUnit, ObservedVariable) are both available.
+
+Two versions are available: v1.0 provides a straightforward merge, while v2.0 introduces an Experiment entity for multi-trial studies and uses a reference-based ownership model.
 
 ## v1.0
 
-25 entities combining ISA and MIAPPE.
+Version 1.0 contains 25 entities with a flat ownership model where Study directly owns most child entities.
 
 ```mermaid
 flowchart TB
@@ -78,7 +82,9 @@ flowchart TB
 
 ## v2.0
 
-26 entities with new Experiment entity and reference-based ownership.
+Version 2.0 introduces the **Experiment** entity for studies that span multiple trials, locations, or time periods. A Study owns shared resources (biological materials, observation units, protocols) while Experiments reference these resources and own time/location-specific data (events, environments, assays).
+
+This reference-based model avoids duplicating entity definitions across experiments while maintaining clear ownership.
 
 ```mermaid
 flowchart TB

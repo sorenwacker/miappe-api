@@ -166,7 +166,7 @@ def start_new_investigation(driver, profile: str = "miappe"):
 
     Args:
         driver: Selenium WebDriver
-        profile: Profile to select ("miappe", "isa", or "combined")
+        profile: Profile to select ("miappe", "isa", or "isa-miappe-combined")
     """
     click_button(driver, "btn-new-investigation")
     click_button(driver, f"profile-{profile}")

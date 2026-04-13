@@ -1,47 +1,33 @@
 # Model Factory
 
-The Model Factory dynamically generates Pydantic models from YAML schema specifications.
-
-## Overview
-
-Rather than manually defining Pydantic models for each MIAPPE entity, the factory reads schema specs and creates models at runtime. This provides:
-
-- Single source of truth in YAML specs
-- Easy version management
-- No code duplication across MIAPPE versions
+The Model Factory dynamically generates Pydantic models from YAML schema specifications at runtime. This keeps the YAML specs as the single source of truth and avoids code duplication across profiles and versions.
 
 ## How It Works
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  YAML Spec   │ --> │   Factory    │ --> │   Pydantic   │
-│              │     │              │     │    Model     │
-└──────────────┘     └──────────────┘     └──────────────┘
+```mermaid
+flowchart LR
+    YAML[YAML Spec] --> Factory[Model Factory] --> Model[Pydantic Model]
 ```
 
-1. **Load**: Factory reads YAML specification file
-2. **Parse**: Extracts field definitions, types, and constraints
-3. **Generate**: Creates Pydantic model class with appropriate field types
-4. **Register**: Stores model in registry for later retrieval
+1. **Load**: Read YAML specification file
+2. **Parse**: Extract field definitions, types, and constraints
+3. **Generate**: Create Pydantic model class with appropriate field types
+4. **Register**: Store model in registry for later retrieval
 
 ## Usage
 
 ```python
 from metaseed.models import get_model
 
-# Get model for Investigation entity (MIAPPE 1.1)
-Investigation = get_model("Investigation", version="1.1")
+Investigation = get_model("Investigation", version="1.1", profile="miappe")
 
-# Create an instance
 inv = Investigation(
-    investigation_unique_id="INV001",
-    investigation_title="Drought tolerance study"
+    unique_id="INV001",
+    title="Drought tolerance study"
 )
 ```
 
 ## Type Mapping
-
-Schema types map to Python/Pydantic types:
 
 | Schema Type | Python Type |
 |-------------|-------------|
@@ -52,18 +38,25 @@ Schema types map to Python/Pydantic types:
 | `date` | `datetime.date` |
 | `datetime` | `datetime.datetime` |
 | `uri` | `pydantic.HttpUrl` |
-| `ontology_term` | `str` (with validation) |
+| `list` | `list[T]` |
+| `entity` | nested model |
 
-## Validation
+## Constraints
 
-Generated models include:
+YAML spec constraints are mapped to Pydantic field constraints:
 
-- Type validation (automatic from Pydantic)
-- Required field validation
-- Custom validators for ontology terms
-- Cross-field validation where specified
+| YAML | Pydantic |
+|------|----------|
+| `pattern` | `pattern` |
+| `min_length` | `min_length` |
+| `max_length` | `max_length` |
+| `minimum` | `ge` |
+| `maximum` | `le` |
+| `enum` | `Literal` type |
+
+Cross-field validation (date ranges, conditional fields) is handled by separate validators.
 
 ## See Also
 
-- [Schema Specs](schema-specs.md) - Specification format
-- [Pydantic Documentation](https://docs.pydantic.dev/) - Pydantic model basics
+- [Schema Specs](../api/schema-specs.md) - Specification format
+- [Profiles](../profiles/isa.md) - Available profiles

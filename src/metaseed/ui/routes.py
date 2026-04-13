@@ -17,6 +17,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
 from metaseed.facade import ProfileFacade
+from metaseed.profiles import ProfileFactory
 from metaseed.validators import validate as validate_data
 
 from .helpers import (
@@ -36,6 +37,44 @@ from .state import AppState, NestedEditContext
 UI_DIR = Path(__file__).parent
 TEMPLATES_DIR = UI_DIR / "templates"
 STATIC_DIR = UI_DIR / "static"
+
+# Profile display metadata for UI
+_PROFILE_DISPLAY_INFO = {
+    "miappe": {
+        "display_name": "MIAPPE",
+        "description": "Minimum Information About Plant Phenotyping Experiments. Best for plant phenotyping studies.",
+    },
+    "isa": {
+        "display_name": "ISA",
+        "description": "Investigation-Study-Assay framework. General purpose for life science experiments.",
+    },
+    "isa-miappe-combined": {
+        "display_name": "ISA-MIAPPE Combined",
+        "description": "Unified model combining ISA and MIAPPE. Supports both multi-omics and phenotyping.",
+    },
+}
+
+
+def _get_profile_display_info(factory: ProfileFactory) -> list[dict]:
+    """Get display information for all available profiles.
+
+    Args:
+        factory: ProfileFactory instance.
+
+    Returns:
+        List of profile info dicts with name, display_name, and description.
+    """
+    profiles = []
+    for name in factory.list_profiles():
+        info = _PROFILE_DISPLAY_INFO.get(name, {})
+        profiles.append(
+            {
+                "name": name,
+                "display_name": info.get("display_name", name.upper()),
+                "description": info.get("description", f"{name} metadata profile."),
+            }
+        )
+    return profiles
 
 
 def create_app(state: AppState | None = None) -> FastAPI:
@@ -70,17 +109,24 @@ def create_app(state: AppState | None = None) -> FastAPI:
         """Render the main page."""
         state = get_state()
         facade = state.get_or_create_facade()
+        profile_factory = ProfileFactory()
+
+        # Get editing node info if set
+        editing_node = None
+        if state.editing_node_id:
+            editing_node = state.nodes_by_id.get(state.editing_node_id)
 
         return templates.TemplateResponse(
             request,
             "base.html",
             {
-                "profiles": ["miappe", "isa", "combined"],
+                "profiles": profile_factory.list_profiles(),
                 "current_profile": state.profile,
                 "version": facade.version,
                 "root_types": state.get_root_entity_types()[:3],
                 "tree_nodes": state.get_tree_data(),
                 "editing_node_id": state.editing_node_id,
+                "editing_node_type": editing_node.entity_type if editing_node else None,
             },
         )
 
@@ -88,8 +134,9 @@ def create_app(state: AppState | None = None) -> FastAPI:
     async def switch_profile(name: str) -> RedirectResponse:
         """Switch to a different profile."""
         state = get_state()
+        profile_factory = ProfileFactory()
 
-        if name not in ["miappe", "isa", "combined"]:
+        if name not in profile_factory.list_profiles():
             raise HTTPException(status_code=400, detail=f"Unknown profile: {name}")
 
         state.profile = name
@@ -119,14 +166,17 @@ def create_app(state: AppState | None = None) -> FastAPI:
 
         # For Investigation, show profile selection if no profile specified
         if entity_type == "Investigation" and not profile:
+            profile_factory = ProfileFactory()
+            profiles_info = _get_profile_display_info(profile_factory)
             return templates.TemplateResponse(
                 request,
                 "partials/profile_select.html",
-                {},
+                {"profiles": profiles_info},
             )
 
         # If profile specified, switch to it
-        if profile and profile in ["miappe", "isa", "combined"]:
+        profile_factory = ProfileFactory()
+        if profile and profile in profile_factory.list_profiles():
             state.profile = profile
             state.facade = None  # Reset facade to use new profile
 

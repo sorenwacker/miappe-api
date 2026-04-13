@@ -1053,3 +1053,94 @@ body::before {
         font-size: 1.5rem;
     }
 }
+
+/* ============================================
+   ENTITY LIST (after import)
+   ============================================ */
+.entity-list {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: var(--space-xl);
+}
+
+.entity-list h2 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--clr-forest);
+    margin-bottom: var(--space-lg);
+}
+
+.entity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.entity-item.child {
+    margin-left: var(--space-xl);
+    padding-left: var(--space-md);
+    border-left: 2px solid var(--clr-sage);
+}
+
+.btn-entity {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--clr-paper);
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+}
+
+.btn-entity:hover {
+    background: var(--clr-ivory);
+    border-color: var(--clr-sage);
+    box-shadow: var(--shadow-sm);
+}
+
+.entity-type {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--clr-moss);
+    background: var(--clr-success-bg);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.entity-label {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    color: var(--clr-ink);
+}
+
+.btn-delete {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--clr-ink-light);
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: var(--clr-error-bg);
+    border-color: var(--clr-error);
+    color: var(--clr-error);
+}
+
+.entity-children {
+    margin-top: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
