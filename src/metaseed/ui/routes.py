@@ -1014,37 +1014,33 @@ def create_app(state: AppState | None = None) -> FastAPI:
             entities_by_type[entity_type].append(data)
             extract_nested_entities(data, entity_type)
 
-        if not entities_by_type:
-            ws = wb.create_sheet("Info")
-            ws.append(["No entities to export"])
-        else:
-            for entity_type, entities in entities_by_type.items():
-                if not entities:
-                    continue
+        # Create sheets for ALL entity types in the profile, even if empty
+        for entity_type in facade.entities:
+            helper = getattr(facade, entity_type, None)
+            if not helper:
+                continue
 
-                ws = wb.create_sheet(entity_type)
-                helper = getattr(facade, entity_type, None)
-                if helper:
-                    nested_fields = set(helper.nested_fields.keys())
-                    columns = [f for f in helper.all_fields if f not in nested_fields]
-                else:
-                    columns = [k for k in entities[0] if not isinstance(entities[0].get(k), list)]
+            ws = wb.create_sheet(entity_type)
+            nested_fields = set(helper.nested_fields.keys())
+            columns = [f for f in helper.all_fields if f not in nested_fields]
 
-                ws.append(columns)
+            ws.append(columns)
 
-                for entity_data in entities:
-                    row = []
-                    for col in columns:
-                        value = entity_data.get(col, "")
-                        if isinstance(value, list):
-                            if value and not isinstance(value[0], dict):
-                                value = ", ".join(str(v) for v in value)
-                            else:
-                                value = f"[{len(value)} items]"
-                        elif isinstance(value, dict):
-                            value = "[object]"
-                        row.append(value)
-                    ws.append(row)
+            # Add data rows if we have any
+            entities = entities_by_type.get(entity_type, [])
+            for entity_data in entities:
+                row = []
+                for col in columns:
+                    value = entity_data.get(col, "")
+                    if isinstance(value, list):
+                        if value and not isinstance(value[0], dict):
+                            value = ", ".join(str(v) for v in value)
+                        else:
+                            value = f"[{len(value)} items]"
+                    elif isinstance(value, dict):
+                        value = "[object]"
+                    row.append(value)
+                ws.append(row)
 
         output = BytesIO()
         wb.save(output)
