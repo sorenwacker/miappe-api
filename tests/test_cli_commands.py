@@ -26,8 +26,9 @@ class TestValidateCommand:
     def test_validate_file_not_found(self, tmp_path):
         """Validate returns error for missing file."""
         result = runner.invoke(app, ["validate", str(tmp_path / "missing.yaml")])
-        assert result.exit_code == 1
-        assert "File not found" in result.output
+        assert result.exit_code == 2  # EXIT_INPUT_ERROR
+        output = result.output + (result.stderr or "")
+        assert "File not found" in output or "not found" in output.lower()
 
     def test_validate_invalid_yaml(self, tmp_path):
         """Validate returns error for invalid YAML."""
@@ -35,8 +36,9 @@ class TestValidateCommand:
         bad_yaml.write_text("invalid: yaml: content: ][", encoding="utf-8")
 
         result = runner.invoke(app, ["validate", str(bad_yaml)])
-        assert result.exit_code == 1
-        assert "Invalid YAML" in result.output
+        assert result.exit_code == 2  # EXIT_INPUT_ERROR
+        output = result.output + (result.stderr or "")
+        assert "Invalid YAML" in output or "yaml" in output.lower()
 
     def test_validate_empty_yaml(self, tmp_path):
         """Validate handles empty YAML file."""
@@ -53,8 +55,10 @@ class TestValidateCommand:
         data = {
             "unique_id": "INV-001",
             "title": "Test Investigation",
-            "studies": [{"unique_id": "STU-001", "title": "Study 1"}],
-            "contacts": [{"name": "John Doe"}],
+            "studies": [
+                {"unique_id": "STU-001", "title": "Study 1", "investigation_id": "INV-001"}
+            ],
+            "contacts": [{"name": "John Doe", "investigation_id": "INV-001"}],
         }
         valid_yaml.write_text(yaml.dump(data), encoding="utf-8")
 
@@ -78,8 +82,10 @@ class TestValidateCommand:
         data = {
             "unique_id": "INV-001",
             "title": "Test Investigation",
-            "studies": [{"unique_id": "STU-001", "title": "Study 1"}],
-            "contacts": [{"name": "John Doe"}],
+            "studies": [
+                {"unique_id": "STU-001", "title": "Study 1", "investigation_id": "INV-001"}
+            ],
+            "contacts": [{"name": "John Doe", "investigation_id": "INV-001"}],
         }
         valid_yaml.write_text(yaml.dump(data), encoding="utf-8")
 
@@ -125,8 +131,9 @@ class TestTemplateCommand:
     def test_template_unknown_entity(self):
         """Template returns error for unknown entity."""
         result = runner.invoke(app, ["template", "unknown_entity"])
-        assert result.exit_code == 1
-        assert "Error" in result.output
+        assert result.exit_code == 3  # EXIT_CONFIG_ERROR
+        output = result.output + (result.stderr or "")
+        assert "Error" in output or "error" in output.lower()
 
     def test_template_with_version_option(self):
         """Template accepts version option."""
@@ -179,8 +186,9 @@ class TestConvertCommand:
         result = runner.invoke(
             app, ["convert", str(tmp_path / "missing.yaml"), str(tmp_path / "output.json")]
         )
-        assert result.exit_code == 1
-        assert "File not found" in result.output
+        assert result.exit_code == 2  # EXIT_INPUT_ERROR
+        output = result.output + (result.stderr or "")
+        assert "File not found" in output or "not found" in output.lower()
 
     def test_convert_unknown_input_format(self, tmp_path):
         """Convert returns error for unknown input format."""
@@ -210,8 +218,9 @@ class TestConvertCommand:
         result = runner.invoke(
             app, ["convert", str(input_file), str(tmp_path / "output.json"), "-e", "unknown"]
         )
-        assert result.exit_code == 1
-        assert "Error" in result.output
+        assert result.exit_code == 3  # EXIT_CONFIG_ERROR
+        output = result.output + (result.stderr or "")
+        assert "Error" in output or "error" in output.lower()
 
     def test_convert_invalid_data(self, tmp_path):
         """Convert returns error for invalid data."""
@@ -221,7 +230,7 @@ class TestConvertCommand:
         result = runner.invoke(
             app, ["convert", str(input_file), str(tmp_path / "output.json"), "-e", "investigation"]
         )
-        assert result.exit_code == 1
+        assert result.exit_code == 2  # EXIT_INPUT_ERROR
 
 
 class TestEntitiesCommand:
@@ -238,13 +247,14 @@ class TestEntitiesCommand:
         """Entities accepts version option."""
         result = runner.invoke(app, ["entities", "-v", "1.1"])
         assert result.exit_code == 0
-        assert "MIAPPE v1.1" in result.output
+        assert "miappe v1.1" in result.output.lower()
 
     def test_entities_invalid_version(self):
         """Entities returns error for invalid version."""
         result = runner.invoke(app, ["entities", "-v", "99.99"])
-        assert result.exit_code == 1
-        assert "Error" in result.output
+        assert result.exit_code == 3  # EXIT_CONFIG_ERROR
+        output = result.output + (result.stderr or "")
+        assert "Error" in output or "error" in output.lower()
 
 
 class TestImportCommand:

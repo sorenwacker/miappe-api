@@ -30,9 +30,11 @@ unique_id: INV001
 title: Test Investigation
 description: A test investigation
 contacts:
-  - name: Test Contact
+  - investigation_id: INV001
+    name: Test Contact
 studies:
   - unique_id: STU001
+    investigation_id: INV001
     title: Test Study
 """
         file_path = tmp_path / "investigation.yaml"
