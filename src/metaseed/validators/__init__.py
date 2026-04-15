@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from metaseed.validators.base import ValidationError, ValidationRule
+from metaseed.validators.dataset import DatasetValidationResult, DatasetValidator
 from metaseed.validators.engine import ValidationEngine, create_engine_for_entity
 from metaseed.validators.rules import (
     DateRangeRule,
@@ -18,6 +19,8 @@ from metaseed.validators.rules import (
 )
 
 __all__ = [
+    "DatasetValidationResult",
+    "DatasetValidator",
     "DateRangeRule",
     "RequiredFieldsRule",
     "UniqueIdPatternRule",
