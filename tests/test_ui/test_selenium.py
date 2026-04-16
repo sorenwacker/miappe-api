@@ -79,13 +79,14 @@ def server():
 
 @pytest.fixture
 def browser(server):  # noqa: ARG001
-    """Create a visible Chrome browser for testing."""
+    """Create a headless Chrome browser for testing."""
     _ = server  # Ensure server is running
     options = Options()
-    # Run in visible mode (no headless)
-    options.add_argument("--window-size=1280,900")
+    options.add_argument("--headless=new")
+    options.add_argument("--window-size=1920,1200")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
 
     driver = webdriver.Chrome(options=options)
     driver.implicitly_wait(5)
@@ -136,6 +137,9 @@ def click_button(driver, testid: str):
     button = WebDriverWait(driver, 5).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, f"[data-testid='{testid}']"))
     )
+    # Scroll into view for headless mode compatibility
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
+    time.sleep(0.1)  # Brief pause after scroll
     button.click()
     time.sleep(CLICK_DELAY)
 
@@ -145,6 +149,9 @@ def click_element(driver, testid: str):
     element = WebDriverWait(driver, 5).until(
         EC.element_to_be_clickable((By.CSS_SELECTOR, f"[data-testid='{testid}']"))
     )
+    # Scroll into view for headless mode compatibility
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+    time.sleep(0.1)  # Brief pause after scroll
     element.click()
     time.sleep(CLICK_DELAY)
 
