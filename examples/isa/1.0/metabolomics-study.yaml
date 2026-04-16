@@ -203,73 +203,61 @@ studies:
             value: ICE1 overexpressor
 
     # Process sequence links sources to samples via protocol execution
-    # Per ISA-JSON: inputs/outputs reference materials declared at Study level
+    # Inputs/outputs are string references to materials declared at Study level
     process_sequence:
       - name: sample_collection_Col0_0h_Rep1
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_Col0_seeds
         outputs:
-          - name: Col0_Control_0h_Rep1
-            study_id: STU-ARAB-COLD-01
+          - Col0_Control_0h_Rep1
 
       - name: sample_collection_Col0_0h_Rep2
         executes_protocol:
           name: Plant growth protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_Col0_seeds
         outputs:
-          - name: Col0_Control_0h_Rep2
-            study_id: STU-ARAB-COLD-01
+          - Col0_Control_0h_Rep2
 
       - name: sample_collection_Col0_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_Col0_seeds
         outputs:
-          - name: Col0_Cold_24h_Rep1
-            study_id: STU-ARAB-COLD-01
+          - Col0_Cold_24h_Rep1
 
       - name: sample_collection_Col0_24h_Rep2
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_Col0_seeds
         outputs:
-          - name: Col0_Cold_24h_Rep2
-            study_id: STU-ARAB-COLD-01
+          - Col0_Cold_24h_Rep2
 
       - name: sample_collection_Col0_7d_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_Col0_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_Col0_seeds
         outputs:
-          - name: Col0_Cold_7d_Rep1
-            study_id: STU-ARAB-COLD-01
+          - Col0_Cold_7d_Rep1
 
       - name: sample_collection_ICE1_24h_Rep1
         executes_protocol:
           name: Cold treatment protocol
           study_id: STU-ARAB-COLD-01
         inputs:
-          - name: Arabidopsis_ICE1_seeds
-            study_id: STU-ARAB-COLD-01
+          - Arabidopsis_ICE1_seeds
         outputs:
-          - name: ICE1_Cold_24h_Rep1
-            study_id: STU-ARAB-COLD-01
+          - ICE1_Cold_24h_Rep1
 
     assays:
       - study_id: STU-ARAB-COLD-01
@@ -279,27 +267,128 @@ studies:
         technology_platform: Thermo Q Exactive Plus
         # Assay references samples declared at Study level
         samples:
-          - name: Col0_Control_0h_Rep1
-            study_id: STU-ARAB-COLD-01
-          - name: Col0_Control_0h_Rep2
-            study_id: STU-ARAB-COLD-01
-          - name: Col0_Cold_24h_Rep1
-            study_id: STU-ARAB-COLD-01
-          - name: Col0_Cold_7d_Rep1
-            study_id: STU-ARAB-COLD-01
+          - Col0_Control_0h_Rep1
+          - Col0_Control_0h_Rep2
+          - Col0_Cold_24h_Rep1
+          - Col0_Cold_7d_Rep1
+
+        # Other materials: Extracts and Labeled Extracts (per ISA-JSON spec)
+        other_materials:
+          # Extracts derived from samples (derivation captured in process_sequence)
+          - name: Extract_Col0_Control_0h_Rep1
+            type: Extract Name
+            characteristics:
+              - category: Extraction method
+                value: Methanol extraction
+
+          - name: Extract_Col0_Control_0h_Rep2
+            type: Extract Name
+            characteristics:
+              - category: Extraction method
+                value: Methanol extraction
+
+          - name: Extract_Col0_Cold_24h_Rep1
+            type: Extract Name
+            characteristics:
+              - category: Extraction method
+                value: Methanol extraction
+
+          - name: Extract_Col0_Cold_7d_Rep1
+            type: Extract Name
+            characteristics:
+              - category: Extraction method
+                value: Methanol extraction
+
+          # Labeled extracts derive from extracts
+          - name: LabeledExtract_Col0_Control_0h_Rep1
+            type: Labeled Extract Name
+            derives_from:
+              - Extract_Col0_Control_0h_Rep1
+            characteristics:
+              - category: Label
+                value: none
+
+          - name: LabeledExtract_Col0_Control_0h_Rep2
+            type: Labeled Extract Name
+            derives_from:
+              - Extract_Col0_Control_0h_Rep2
+            characteristics:
+              - category: Label
+                value: none
+
+          - name: LabeledExtract_Col0_Cold_24h_Rep1
+            type: Labeled Extract Name
+            derives_from:
+              - Extract_Col0_Cold_24h_Rep1
+            characteristics:
+              - category: Label
+                value: none
+
+          - name: LabeledExtract_Col0_Cold_7d_Rep1
+            type: Labeled Extract Name
+            derives_from:
+              - Extract_Col0_Cold_7d_Rep1
+            characteristics:
+              - category: Label
+                value: none
+
         data_files:
           - assay_id: a_metabolome_lcms_pos
             filename: Col0_Control_0h_Rep1_pos.raw
             label: Raw Data File
+            derives_from:
+              - LabeledExtract_Col0_Control_0h_Rep1
           - assay_id: a_metabolome_lcms_pos
             filename: Col0_Control_0h_Rep2_pos.raw
             label: Raw Data File
+            derives_from:
+              - LabeledExtract_Col0_Control_0h_Rep2
           - assay_id: a_metabolome_lcms_pos
             filename: Col0_Cold_24h_Rep1_pos.raw
             label: Raw Data File
+            derives_from:
+              - LabeledExtract_Col0_Cold_24h_Rep1
           - assay_id: a_metabolome_lcms_pos
             filename: processed_pos_mode.mzML
             label: Derived Spectral Data File
+
+        # Assay-level process sequence for extraction and analysis
+        process_sequence:
+          - name: extraction_Col0_Control_0h_Rep1
+            executes_protocol:
+              name: Metabolite extraction protocol
+              study_id: STU-ARAB-COLD-01
+            inputs:
+              - Col0_Control_0h_Rep1
+            outputs:
+              - Extract_Col0_Control_0h_Rep1
+
+          - name: extraction_Col0_Control_0h_Rep2
+            executes_protocol:
+              name: Metabolite extraction protocol
+              study_id: STU-ARAB-COLD-01
+            inputs:
+              - Col0_Control_0h_Rep2
+            outputs:
+              - Extract_Col0_Control_0h_Rep2
+
+          - name: lcms_analysis_Col0_Control_0h_Rep1
+            executes_protocol:
+              name: LC-MS analysis protocol
+              study_id: STU-ARAB-COLD-01
+            inputs:
+              - LabeledExtract_Col0_Control_0h_Rep1
+            outputs:
+              - Col0_Control_0h_Rep1_pos.raw
+
+          - name: lcms_analysis_Col0_Control_0h_Rep2
+            executes_protocol:
+              name: LC-MS analysis protocol
+              study_id: STU-ARAB-COLD-01
+            inputs:
+              - LabeledExtract_Col0_Control_0h_Rep2
+            outputs:
+              - Col0_Control_0h_Rep2_pos.raw
 
       - study_id: STU-ARAB-COLD-01
         filename: a_metabolome_lcms_neg.txt
@@ -307,14 +396,14 @@ studies:
         technology_type: mass spectrometry
         technology_platform: Thermo Q Exactive Plus
         samples:
-          - name: Col0_Control_0h_Rep1
-            study_id: STU-ARAB-COLD-01
-          - name: Col0_Cold_24h_Rep2
-            study_id: STU-ARAB-COLD-01
+          - Col0_Control_0h_Rep1
+          - Col0_Cold_24h_Rep2
         data_files:
           - assay_id: a_metabolome_lcms_neg
             filename: Col0_Control_0h_Rep1_neg.raw
             label: Raw Data File
+            derives_from:
+              - LabeledExtract_Col0_Control_0h_Rep1
           - assay_id: a_metabolome_lcms_neg
             filename: processed_neg_mode.mzML
             label: Derived Spectral Data File

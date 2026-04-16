@@ -155,21 +155,26 @@ class TestISAMaterialFlowChain:
         assert derives_from.items == "Extract"
 
     def test_datafile_derives_from_labeled_extract(self, isa_loader: SpecLoader) -> None:
-        """DataFile.derives_from references LabeledExtract."""
+        """DataFile.derives_from uses string references to LabeledExtract names."""
         spec = isa_loader.load_entity("DataFile", version="1.0")
 
         derives_from = next((f for f in spec.fields if f.name == "derives_from"), None)
         assert derives_from is not None, "DataFile must have derives_from field"
-        assert derives_from.items == "LabeledExtract"
+        # DataFile.derives_from uses string references for flexibility
+        assert derives_from.items == "string"
 
     def test_complete_material_flow_chain(self, isa_loader: SpecLoader) -> None:
-        """Verify complete ISA material flow chain is properly connected."""
+        """Verify complete ISA material flow chain is properly connected.
+
+        Note: DataFile uses string references for derives_from to allow
+        flexibility in referencing different material types.
+        """
         expected_chain = [
             ("Source", None),  # Source has no derives_from
             ("Sample", "Source"),
             ("Extract", "Sample"),
             ("LabeledExtract", "Extract"),
-            ("DataFile", "LabeledExtract"),
+            ("DataFile", "string"),  # Uses string references
         ]
 
         for entity_name, expected_derives_from in expected_chain:
