@@ -53,7 +53,7 @@ def build_graph(state: AppState) -> dict:
         # Fall back to a hash of the data for truly anonymous entities
         return str(hash(frozenset(str(v) for v in data.values() if v)))
 
-    def add_or_get_node(entity_type: str, label: str, data: dict) -> str:
+    def add_or_get_node(entity_type: str, label: str, data: dict, level: int = 0) -> str:
         """Add a node or return existing node ID if duplicate."""
         # Determine display group based on type field
         display_group = entity_type
@@ -62,7 +62,7 @@ def build_graph(state: AppState) -> dict:
             if "Extract" in type_value:
                 display_group = "LabeledExtract" if "Labeled" in type_value else "Extract"
         elif entity_type == "MaterialRef" and data.get("type"):
-            # MaterialRef uses type to indicate actual material type
+            # MaterialRef uses type to indicate actual material type for display
             display_group = data["type"]
 
         key = (display_group, get_entity_key(data, entity_type))
@@ -79,17 +79,18 @@ def build_graph(state: AppState) -> dict:
                 "label": truncate(label, 25),
                 "title": f"{display_group}: {label}",
                 "group": display_group,
+                "level": level,  # Explicit level for hierarchical layout
             }
         )
         return vis_id
 
-    def add_tree_node(node: TreeNode, parent_vis_id: str | None = None) -> None:
+    def add_tree_node(node: TreeNode, parent_vis_id: str | None = None, level: int = 0) -> None:
         """Add a TreeNode and its children to the graph."""
         data = {}
         if node.instance and hasattr(node.instance, "model_dump"):
             data = node.instance.model_dump(exclude_none=True)
 
-        vis_id = add_or_get_node(node.entity_type, node.label, data)
+        vis_id = add_or_get_node(node.entity_type, node.label, data, level)
 
         if parent_vis_id:
             edge = {"from": parent_vis_id, "to": vis_id}
@@ -98,10 +99,10 @@ def build_graph(state: AppState) -> dict:
 
         # Process nested entities from instance data
         if data:
-            add_nested_entities(data, node.entity_type, vis_id, state)
+            add_nested_entities(data, node.entity_type, vis_id, state, level + 1)
 
     def add_nested_entities(
-        data: dict, entity_type: str, parent_vis_id: str, state: AppState
+        data: dict, entity_type: str, parent_vis_id: str, state: AppState, level: int
     ) -> None:
         """Add nested entities from instance data."""
         facade = state.get_or_create_facade()
@@ -124,14 +125,14 @@ def build_graph(state: AppState) -> dict:
 
                 # Get label for nested item
                 label = get_entity_label(item_data, nested_type, facade)
-                vis_id = add_or_get_node(nested_type, label, item_data)
+                vis_id = add_or_get_node(nested_type, label, item_data, level)
 
                 edge = {"from": parent_vis_id, "to": vis_id}
                 if edge not in edges:
                     edges.append(edge)
 
                 # Recursively process nested children
-                add_nested_entities(item_data, nested_type, vis_id, state)
+                add_nested_entities(item_data, nested_type, vis_id, state, level + 1)
 
     def get_entity_label(data: dict, entity_type: str, _facade: object) -> str:
         """Get display label for an entity."""
