@@ -55,6 +55,7 @@ class FieldSpec(BaseModel):
 
     Attributes:
         name: Field identifier (snake_case).
+        codename: BrAPI-compatible camelCase identifier (optional).
         type: Data type of the field.
         required: Whether the field is mandatory.
         description: Human-readable description.
@@ -68,6 +69,7 @@ class FieldSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
+    codename: str | None = None
     type: FieldType
     required: bool = False
     description: str = ""
