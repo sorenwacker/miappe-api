@@ -77,11 +77,30 @@
                                placeholder="MIAPPE:DM-1">
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Unique Within</label>
+                        <select name="unique_within" class="form-input">
+                            <option value="">Not unique</option>
+                            <option value="parent" {% if field.unique_within == 'parent' %}selected{% endif %}>Parent entity</option>
+                            <option value="global" {% if field.unique_within == 'global' %}selected{% endif %}>Globally</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="field-form-row">
+                    <div class="form-group">
                         <label class="form-label">Parent Ref</label>
                         <input type="text"
                                name="parent_ref"
                                class="form-input"
                                value="{{ field.parent_ref or '' }}"
+                               placeholder="Entity.field">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reference</label>
+                        <input type="text"
+                               name="reference"
+                               class="form-input"
+                               value="{{ field.reference or '' }}"
                                placeholder="Entity.field">
                     </div>
                 </div>
@@ -131,11 +150,32 @@
                     </div>
                 </div>
 
+                <div class="field-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Min Items (lists)</label>
+                        <input type="number"
+                               name="min_items"
+                               class="form-input"
+                               min="0"
+                               value="{{ field.constraints.min_items if field.constraints and field.constraints.min_items else '' }}"
+                               placeholder="e.g., 1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Max Items (lists)</label>
+                        <input type="number"
+                               name="max_items"
+                               class="form-input"
+                               min="0"
+                               value="{{ field.constraints.max_items if field.constraints and field.constraints.max_items else '' }}">
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label class="form-label">Enum (one per line)</label>
+                    <label class="form-label">Allowed Values (one per line)</label>
                     <textarea name="enum_values"
                               class="form-input"
-                              rows="2">{% if field.constraints and field.constraints.enum %}{{ field.constraints.enum|join('\n') }}{% endif %}</textarea>
+                              rows="2"
+                              placeholder="value1&#10;value2&#10;value3">{% if field.constraints and field.constraints.enum %}{{ field.constraints.enum|join('\n') }}{% endif %}</textarea>
                 </div>
             </div>
         </details>

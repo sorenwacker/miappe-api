@@ -37,6 +37,8 @@ class Constraints(BaseModel):
         max_length: Maximum string length.
         minimum: Minimum numeric value.
         maximum: Maximum numeric value.
+        min_items: Minimum items for list fields.
+        max_items: Maximum items for list fields.
         enum: List of allowed values for enumerated fields.
     """
 
@@ -47,6 +49,8 @@ class Constraints(BaseModel):
     max_length: int | None = None
     minimum: int | float | None = None
     maximum: int | float | None = None
+    min_items: int | None = None
+    max_items: int | None = None
     enum: list[str] | None = None
 
 
@@ -64,6 +68,8 @@ class FieldSpec(BaseModel):
         items: For list type, the entity type of list items.
         parent_ref: Parent entity reference in format "Entity.field" (e.g., "Study.identifier").
             Fields with parent_ref are auto-filled from parent context and hidden in nested forms.
+        unique_within: Uniqueness scope ("parent" or "global").
+        reference: Entity.field reference for integrity validation.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -77,6 +83,8 @@ class FieldSpec(BaseModel):
     constraints: Constraints | None = None
     items: str | None = None
     parent_ref: str | None = None
+    unique_within: str | None = None
+    reference: str | None = None
 
 
 class EntitySpec(BaseModel):

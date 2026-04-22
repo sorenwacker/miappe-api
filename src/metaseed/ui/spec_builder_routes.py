@@ -487,7 +487,11 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         max_length: str = Form(""),
         minimum: str = Form(""),
         maximum: str = Form(""),
+        min_items: str = Form(""),
+        max_items: str = Form(""),
         enum_values: str = Form(""),
+        unique_within: str = Form(""),
+        reference: str = Form(""),
     ) -> HTMLResponse:
         """Update a field."""
         builder = get_builder_state()
@@ -503,7 +507,9 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
 
         # Build constraints if any are provided
         constraints = None
-        has_constraints = any([pattern, min_length, max_length, minimum, maximum, enum_values])
+        has_constraints = any(
+            [pattern, min_length, max_length, minimum, maximum, min_items, max_items, enum_values]
+        )
         if has_constraints:
             constraints = Constraints(
                 pattern=pattern.strip() or None,
@@ -511,6 +517,8 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
                 max_length=int(max_length) if max_length.strip() else None,
                 minimum=float(minimum) if minimum.strip() else None,
                 maximum=float(maximum) if maximum.strip() else None,
+                min_items=int(min_items) if min_items.strip() else None,
+                max_items=int(max_items) if max_items.strip() else None,
                 enum=[v.strip() for v in enum_values.split("\n") if v.strip()]
                 if enum_values.strip()
                 else None,
@@ -526,6 +534,8 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         field.codename = codename.strip() or None
         field.items = items.strip() or None
         field.parent_ref = parent_ref.strip() or None
+        field.unique_within = unique_within.strip() or None
+        field.reference = reference.strip() or None
         field.constraints = constraints
 
         builder.editing_field_idx = None
