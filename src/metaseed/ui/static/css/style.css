@@ -2047,10 +2047,11 @@ body::before {
 
 .erd-layout {
     display: grid;
-    grid-template-columns: 280px 1fr 380px;
+    grid-template-columns: 280px 1fr;
     grid-template-rows: 1fr;
     height: calc(100vh - 60px);
     overflow: hidden;
+    position: relative;
 }
 
 /* ERD Sidebar */
@@ -2150,27 +2151,16 @@ body::before {
     font-weight: 500;
 }
 
-.sidebar-tab-content {
+.sidebar-content {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    min-height: 0; /* Allow flex child to shrink */
-}
-
-.tab-panel {
-    display: none;
+    min-height: 0;
     padding: var(--space-md);
-    height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-.tab-panel.active {
-    display: block;
 }
 
 /* Prevent form inputs from overflowing sidebar */
-.tab-panel .form-input {
+.sidebar-content .form-input {
     max-width: 100%;
     box-sizing: border-box;
 }
@@ -2463,15 +2453,23 @@ body::before {
     border-left-color: var(--clr-sage);
 }
 
-/* ERD Editor Panel */
+/* ERD Editor Panel - positioned as overlay */
 .erd-editor-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 380px;
+    height: 100%;
+    max-height: calc(100vh - 60px);
     background: white;
     border-left: 1px solid var(--clr-parchment);
     display: flex;
     flex-direction: column;
     transform: translateX(100%);
     transition: transform var(--transition-med);
-    position: relative;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    overflow: hidden;
 }
 
 .erd-editor-panel.open {
@@ -2513,7 +2511,10 @@ body::before {
 .editor-panel-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--space-lg);
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .editor-placeholder {
@@ -2660,43 +2661,48 @@ body::before {
     background: var(--clr-paper);
 }
 
-/* Sidebar sections (legacy, for rules) */
-.sidebar-section {
+/* Sidebar collapsible sections */
+details.sidebar-section {
     background: white;
     border: 1px solid var(--clr-parchment);
     border-radius: var(--radius-md);
-    margin-bottom: var(--space-md);
+    margin-top: var(--space-md);
     overflow: hidden;
 }
 
-.sidebar-section-header {
+details.sidebar-section summary {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    justify-content: space-between;
     padding: var(--space-sm) var(--space-md);
     background: var(--clr-parchment);
     cursor: pointer;
     font-weight: 500;
     font-size: 0.875rem;
+    list-style: none;
 }
 
-.sidebar-section-header:hover {
-    background: #ddd9d2;
+details.sidebar-section summary::-webkit-details-marker {
+    display: none;
 }
 
-.sidebar-section-icon {
-    font-size: 0.75rem;
-    color: var(--clr-ink-light);
+details.sidebar-section summary::before {
+    content: "▶";
+    font-size: 0.625rem;
+    margin-right: var(--space-sm);
     transition: transform 0.2s;
 }
 
-.sidebar-section-content {
-    display: none;
-    padding: var(--space-sm);
+details.sidebar-section[open] summary::before {
+    transform: rotate(90deg);
 }
 
-.sidebar-section-content.open {
-    display: block;
+details.sidebar-section summary:hover {
+    background: #ddd9d2;
+}
+
+.sidebar-section-body {
+    padding: var(--space-sm);
 }
 
 .sidebar-count {
@@ -2972,11 +2978,15 @@ body::before {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .panel-section {
     border-bottom: 1px solid var(--clr-parchment);
     padding-bottom: var(--space-md);
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .panel-section:last-child {
@@ -3011,6 +3021,8 @@ body::before {
     flex-direction: column;
     gap: var(--space-xs);
     margin-bottom: var(--space-sm);
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .field-card {
@@ -3018,6 +3030,9 @@ body::before {
     border: 1px solid var(--clr-parchment);
     border-radius: var(--radius-sm);
     transition: all var(--transition-fast);
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .field-card:hover {
@@ -3066,16 +3081,21 @@ body::before {
 .add-field-inline {
     display: flex;
     gap: var(--space-xs);
+    flex-wrap: wrap;
+    max-width: 100%;
 }
 
 .add-field-inline .form-input {
     flex: 1;
+    min-width: 80px;
     padding: var(--space-xs) var(--space-sm);
     font-size: 0.8125rem;
+    box-sizing: border-box;
 }
 
 .add-field-inline select {
     width: 100px;
+    flex-shrink: 0;
 }
 
 /* Relationships list */
@@ -3135,21 +3155,36 @@ body::before {
 
 /* Field edit form */
 .field-edit-form {
-    padding: var(--space-md);
+    padding: var(--space-sm);
     background: white;
-    border: 1px solid var(--clr-moss);
-    border-radius: var(--radius-md);
-    margin-top: var(--space-xs);
+    border: none;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.field-edit-form form {
+    width: 100%;
+}
+
+.field-edit-form .form-input,
+.field-edit-form input,
+.field-edit-form select,
+.field-edit-form textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .field-form-row {
-    display: flex;
-    gap: var(--space-sm);
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--space-xs);
     margin-bottom: var(--space-sm);
 }
 
 .field-form-row .form-group {
-    flex: 1;
+    min-width: 0;
     margin: 0;
 }
 
@@ -3475,6 +3510,25 @@ body::before {
 
     .start-options {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Wide screens - larger sidebar and panel */
+@media (min-width: 1800px) {
+    .erd-layout {
+        grid-template-columns: 350px 1fr;
+    }
+    .erd-editor-panel {
+        width: 450px;
+    }
+}
+
+@media (min-width: 2200px) {
+    .erd-layout {
+        grid-template-columns: 400px 1fr;
+    }
+    .erd-editor-panel {
+        width: 500px;
     }
 }
 
