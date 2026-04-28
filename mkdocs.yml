@@ -3,6 +3,8 @@ site_description: Tools for creating, editing, and validating experimental metad
 
 theme:
   name: material
+  logo: images/metaseed-icon.svg
+  favicon: images/metaseed-icon.svg
   palette:
     - scheme: default
       primary: teal

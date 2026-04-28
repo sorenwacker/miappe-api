@@ -140,8 +140,13 @@ body::before {
     gap: var(--space-sm);
 }
 
+.header-logo {
+    height: 32px;
+    width: auto;
+}
+
 .header-title::before {
-    content: '';
+    content: none;
     display: inline-block;
     width: 28px;
     height: 28px;
@@ -797,9 +802,9 @@ body::before {
     width: 100px;
     height: 100px;
     margin-bottom: var(--space-xl);
-    background: linear-gradient(135deg, var(--clr-moss) 0%, var(--clr-sage) 50%, var(--clr-accent-light) 100%);
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
+    background: url('/static/images/metaseed-icon.svg') center/contain no-repeat;
+    border-radius: 0;
+    box-shadow: none;
     animation: logoFloat 3s ease-in-out infinite;
 }
 

@@ -1,3 +1,7 @@
+<figure markdown="span">
+  ![Metaseed](images/metaseed-logo-400.png){ width="200" }
+</figure>
+
 # Metaseed
 
 Metaseed provides tools for creating, editing, and validating experimental metadata following MIAPPE (Minimum Information About Plant Phenotyping Experiments) standards.

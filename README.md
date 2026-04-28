@@ -1,3 +1,5 @@
+<img src="src/metaseed/ui/static/images/metaseed-logo-400.png" alt="Metaseed" width="200">
+
 # Metaseed
 
 Schema-driven metadata management from YAML specifications.
