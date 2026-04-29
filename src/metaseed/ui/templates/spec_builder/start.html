@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=48">
+    <link rel="stylesheet" href="/static/css/style.css?v=54">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -24,8 +24,39 @@
 
         <main class="main">
             <div class="spec-builder-start">
+                {% if user_specs %}
+                <div class="user-specs-section">
+                    <h2>Your Specifications</h2>
+                    <div class="user-specs-list">
+                        {% for spec in user_specs %}
+                        <div class="user-spec-item">
+                            <div class="user-spec-info">
+                                <span class="user-spec-name">{{ spec.display_name }}</span>
+                                {% if spec.description %}
+                                <span class="user-spec-desc">{{ spec.description[:80] }}{% if spec.description|length > 80 %}...{% endif %}</span>
+                                {% endif %}
+                            </div>
+                            <div class="user-spec-actions">
+                                {% for version in spec.versions %}
+                                <a href="/spec-builder/clone/{{ spec.name }}/{{ version }}"
+                                   class="btn btn-sm btn-primary">
+                                    Edit v{{ version }}
+                                </a>
+                                <button class="btn btn-sm btn-danger"
+                                        onclick="deleteUserSpec('{{ spec.name }}', '{{ version }}')"
+                                        title="Delete {{ spec.display_name }} v{{ version }}">
+                                    &times;
+                                </button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <div class="welcome">
-                    <h2>Create a Metadata Specification</h2>
+                    <h2>Create a New Specification</h2>
                     <p>Build a custom specification from scratch or start with an existing template.</p>
                 </div>
 
@@ -38,8 +69,8 @@
 
                     <div class="start-option start-option-clone">
                         <div class="start-option-icon">~</div>
-                        <h3>Clone Existing</h3>
-                        <p>Start with an existing specification as a template.</p>
+                        <h3>Clone Template</h3>
+                        <p>Start with a built-in specification as a template.</p>
 
                         {% if templates %}
                         <div class="template-list">
@@ -70,5 +101,28 @@
     </div>
 
     <script src="/static/js/app.js?v=30"></script>
+    <script>
+        function deleteUserSpec(name, version) {
+            if (!confirm(`Delete specification "${name}" v${version}? This cannot be undone.`)) {
+                return;
+            }
+            fetch(`/spec-builder/user-spec/${encodeURIComponent(name)}/${encodeURIComponent(version)}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    return response.json().then(data => {
+                        alert('Failed to delete: ' + (data.detail || 'Unknown error'));
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Error deleting spec:', err);
+                alert('Failed to delete specification');
+            });
+        }
+    </script>
 </body>
 </html>

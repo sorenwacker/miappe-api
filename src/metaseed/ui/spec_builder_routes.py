@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from metaseed.specs.schema import (
@@ -82,11 +82,14 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
             )
 
         # Show start options
+        from .spec_builder_helpers import list_user_specs
+
         available_templates = list_available_templates()
+        user_specs = list_user_specs()
         return templates.TemplateResponse(
             request,
             "spec_builder/start.html",
-            {"templates": available_templates},
+            {"templates": available_templates, "user_specs": user_specs},
         )
 
     @router.get("/new", response_class=HTMLResponse)
@@ -304,10 +307,11 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
     async def update_entity(
         request: Request,
         name: str,
+        new_name: str = Form(None, alias="name"),
         description: str = Form(""),
         ontology_term: str = Form(""),
     ) -> HTMLResponse:
-        """Update entity metadata."""
+        """Update entity metadata, including rename."""
         builder = get_builder_state()
         if builder.spec is None:
             raise HTTPException(status_code=400, detail="No spec in progress")
@@ -318,6 +322,70 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         entity = builder.spec.entities[name]
         entity.description = description.strip()
         entity.ontology_term = ontology_term.strip() or None
+
+        # Handle rename
+        final_name = name
+        if new_name and new_name.strip() != name:
+            new_name = new_name.strip()
+
+            # Validate new name
+            error = validate_entity_name(new_name)
+            if error:
+                return templates.TemplateResponse(
+                    request,
+                    "spec_builder/partials/entity_editor.html",
+                    {
+                        "spec": builder.spec,
+                        "entity_name": name,
+                        "entity": entity,
+                        "editing_field_idx": None,
+                        "field_types": [t.value for t in FieldType],
+                        "error": error,
+                    },
+                )
+
+            # Check if new name already exists
+            if new_name in builder.spec.entities:
+                return templates.TemplateResponse(
+                    request,
+                    "spec_builder/partials/entity_editor.html",
+                    {
+                        "spec": builder.spec,
+                        "entity_name": name,
+                        "entity": entity,
+                        "editing_field_idx": None,
+                        "field_types": [t.value for t in FieldType],
+                        "error": f"Entity '{new_name}' already exists",
+                    },
+                )
+
+            # Rename: remove old, add with new name
+            del builder.spec.entities[name]
+            builder.spec.entities[new_name] = entity
+
+            # Update root_entity if it was renamed
+            if builder.spec.root_entity == name:
+                builder.spec.root_entity = new_name
+
+            # Update editing state
+            if builder.editing_entity == name:
+                builder.editing_entity = new_name
+
+            # Update references in other entities
+            for other_entity in builder.spec.entities.values():
+                for field in other_entity.fields:
+                    # Update items (entity name)
+                    if field.items == name:
+                        field.items = new_name
+                    # Update reference (format: Entity.field)
+                    if field.reference and field.reference.startswith(f"{name}."):
+                        field.reference = f"{new_name}.{field.reference.split('.', 1)[1]}"
+                    # Update parent_ref (format: Entity.field)
+                    if field.parent_ref and field.parent_ref.startswith(f"{name}."):
+                        field.parent_ref = f"{new_name}.{field.parent_ref.split('.', 1)[1]}"
+
+            final_name = new_name
+
         builder.mark_changed()
 
         return templates.TemplateResponse(
@@ -325,7 +393,7 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
             "spec_builder/partials/entity_editor.html",
             {
                 "spec": builder.spec,
-                "entity_name": name,
+                "entity_name": final_name,
                 "entity": entity,
                 "editing_field_idx": None,
                 "field_types": [t.value for t in FieldType],
@@ -376,6 +444,7 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
         entity_name: str,
         name: str = Form(...),
         field_type: str = Form("string"),
+        items: str = Form(""),
     ) -> HTMLResponse:
         """Add a new field to an entity."""
         builder = get_builder_state()
@@ -424,9 +493,52 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
             type=FieldType(field_type),
             required=False,
             description="",
+            items=items.strip() or None,
         )
         entity.fields.append(new_field)
         builder.editing_field_idx = len(entity.fields) - 1
+
+        # Auto-create back-reference for list/entity fields pointing to other entities
+        target_entity_name = items.strip() if items else None
+        if (
+            target_entity_name
+            and target_entity_name in builder.spec.entities
+            and field_type in ("list", "entity")
+        ):
+            target_entity = builder.spec.entities[target_entity_name]
+
+            # Ensure parent has an identifier field
+            parent_has_id = any(f.name == "identifier" for f in entity.fields)
+            if not parent_has_id:
+                entity.fields.insert(
+                    0,
+                    FieldSpec(
+                        name="identifier",
+                        type=FieldType.STRING,
+                        required=True,
+                        description="Unique identifier",
+                    ),
+                )
+                builder.editing_field_idx += 1  # Adjust for inserted field
+
+            # Add back-reference to target entity if not exists
+            back_ref_name = f"{entity_name.lower()}_id"
+            has_back_ref = any(
+                f.parent_ref and f.parent_ref.startswith(f"{entity_name}.")
+                for f in target_entity.fields
+            )
+            if not has_back_ref:
+                target_entity.fields.insert(
+                    0,
+                    FieldSpec(
+                        name=back_ref_name,
+                        type=FieldType.STRING,
+                        required=True,
+                        description=f"Reference to parent {entity_name}",
+                        parent_ref=f"{entity_name}.identifier",
+                    ),
+                )
+
         builder.mark_changed()
 
         return templates.TemplateResponse(
@@ -875,5 +987,20 @@ def create_spec_builder_router(templates: Jinja2Templates, get_state: callable) 
                 "spec_builder/partials/save_result.html",
                 {"error": str(e)},
             )
+
+    @router.delete("/user-spec/{name}/{version}", response_class=HTMLResponse)
+    async def delete_user_spec_route(_request: Request, name: str, version: str) -> Response:
+        """Delete a user-created specification."""
+        from .spec_builder_helpers import delete_user_spec
+
+        try:
+            deleted = delete_user_spec(name, version)
+            if deleted:
+                return Response(status_code=200)
+            raise HTTPException(status_code=404, detail=f"Spec {name} v{version} not found")
+        except ValueError as e:
+            raise HTTPException(status_code=403, detail=str(e)) from e
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     return router

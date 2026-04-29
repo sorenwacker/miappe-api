@@ -231,7 +231,7 @@ class TestSpecBuilderRoutes:
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "Start from Scratch" in response.text
-        assert "Clone Existing" in response.text
+        assert "Clone Template" in response.text
 
     def test_new_spec(self, client):
         """Creating new spec initializes empty spec."""
@@ -324,6 +324,62 @@ class TestSpecBuilderRoutes:
         response = client.delete("/spec-builder/entity/ToDelete")
         assert response.status_code == 200
         assert "ToDelete" not in response.text
+
+    def test_rename_entity(self, client):
+        """Rename entity."""
+        client.get("/spec-builder/new")
+        client.post("/spec-builder/entity", data={"name": "OldName"})
+        response = client.put(
+            "/spec-builder/entity/OldName",
+            data={"name": "NewName", "description": "", "ontology_term": ""},
+        )
+        assert response.status_code == 200
+        assert "NewName" in response.text
+        # Verify old name is gone
+        response = client.get("/spec-builder/preview")
+        assert "NewName:" in response.text
+        assert "OldName:" not in response.text
+
+    def test_rename_entity_updates_references(self, client):
+        """Rename entity updates items, reference, and parent_ref in other entities."""
+        client.get("/spec-builder/new")
+        # Create two entities
+        client.post("/spec-builder/entity", data={"name": "Parent"})
+        client.post("/spec-builder/entity", data={"name": "Child"})
+        # Add field in Child that references Parent
+        client.post(
+            "/spec-builder/entity/Child/field",
+            data={"name": "parent_items", "field_type": "list", "items": "Parent"},
+        )
+        # Rename Parent to NewParent
+        client.put(
+            "/spec-builder/entity/Parent",
+            data={"name": "NewParent", "description": "", "ontology_term": ""},
+        )
+        # Verify items was updated in Child
+        response = client.get("/spec-builder/preview")
+        assert "items: NewParent" in response.text
+        assert "items: Parent" not in response.text
+
+    def test_add_list_field_creates_back_reference(self, client):
+        """Adding a list field auto-creates back-reference in target entity."""
+        client.get("/spec-builder/new")
+        # Create parent and child entities
+        client.post("/spec-builder/entity", data={"name": "Investigation"})
+        client.post("/spec-builder/entity", data={"name": "Study"})
+        # Add studies list to Investigation
+        client.post(
+            "/spec-builder/entity/Investigation/field",
+            data={"name": "studies", "field_type": "list", "items": "Study"},
+        )
+        # Verify back-reference was created in Study
+        response = client.get("/spec-builder/preview")
+        preview = response.text
+        # Study should have investigation_id with parent_ref
+        assert "investigation_id" in preview
+        assert "parent_ref: Investigation.identifier" in preview
+        # Investigation should have identifier field
+        assert "identifier" in preview
 
     def test_add_field(self, client):
         """Add field to entity."""
@@ -425,6 +481,12 @@ class TestSpecBuilderRoutes:
         assert "application/x-yaml" in response.headers["content-type"]
         assert "attachment" in response.headers["content-disposition"]
 
+    def test_delete_user_spec_builtin_forbidden(self, client):
+        """Cannot delete built-in specs."""
+        response = client.delete("/spec-builder/user-spec/miappe/1.2")
+        assert response.status_code == 403
+        assert "built-in" in response.json()["detail"].lower()
+
 
 class TestSpecBuilderIntegration:
     """Integration tests for complete spec builder workflows."""
@@ -519,3 +581,60 @@ class TestSpecBuilderIntegration:
         assert "custom_field" in response.text
         # Should still have original entities
         assert "Investigation:" in response.text
+
+    def test_entity_persisted_after_creation(self, client):
+        """Test that newly created entities are persisted in spec state."""
+        # Start new spec
+        client.get("/spec-builder/new")
+
+        # Create first entity
+        response = client.post("/spec-builder/entity", data={"name": "FirstEntity"})
+        assert response.status_code == 200
+        assert "FirstEntity" in response.text
+
+        # Create second entity
+        response = client.post("/spec-builder/entity", data={"name": "SecondEntity"})
+        assert response.status_code == 200
+        assert "SecondEntity" in response.text
+
+        # Verify both entities appear in preview
+        response = client.get("/spec-builder/preview")
+        assert response.status_code == 200
+        assert "FirstEntity:" in response.text
+        assert "SecondEntity:" in response.text
+
+    def test_entity_persisted_in_graph_data(self, client):
+        """Test that entities appear in graph-data endpoint."""
+        # Start new spec
+        client.get("/spec-builder/new")
+
+        # Create entity
+        client.post("/spec-builder/entity", data={"name": "GraphEntity"})
+
+        # Check graph-data endpoint
+        response = client.get("/spec-builder/graph-data")
+        assert response.status_code == 200
+        data = response.json()
+        assert "entities" in data
+        assert "GraphEntity" in data["entities"]
+
+    def test_entity_with_fields_persisted(self, client):
+        """Test that entity with fields is correctly persisted."""
+        # Start new spec
+        client.get("/spec-builder/new")
+
+        # Create entity
+        client.post("/spec-builder/entity", data={"name": "FieldEntity"})
+
+        # Add field
+        response = client.post(
+            "/spec-builder/entity/FieldEntity/field",
+            data={"name": "test_field", "field_type": "string"},
+        )
+        assert response.status_code == 200
+        assert "test_field" in response.text
+
+        # Verify in preview
+        response = client.get("/spec-builder/preview")
+        assert "FieldEntity:" in response.text
+        assert "test_field" in response.text

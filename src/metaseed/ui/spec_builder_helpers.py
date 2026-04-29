@@ -70,8 +70,8 @@ def spec_to_yaml(spec: ProfileSpec) -> str:
     Returns:
         YAML string representation of the spec.
     """
-    # Convert to dict, handling Pydantic models
-    data = spec.model_dump(exclude_none=True, exclude_defaults=False)
+    # Convert to dict, using mode='json' to serialize enums as strings
+    data = spec.model_dump(exclude_none=True, exclude_defaults=False, mode="json")
 
     # Custom representer for cleaner output
     def str_representer(dumper: yaml.Dumper, data: str) -> yaml.Node:
@@ -151,7 +151,7 @@ def save_spec(spec: ProfileSpec, name: str | None = None) -> Path:
 
 
 def list_available_templates() -> list[dict]:
-    """List available profiles that can be used as templates.
+    """List built-in profiles that can be used as templates.
 
     Returns:
         List of dicts with profile info: name, display_name, versions.
@@ -163,6 +163,10 @@ def list_available_templates() -> list[dict]:
 
     result = []
     for profile_name in profiles:
+        # Skip user-defined profiles
+        if loader.is_user_defined(profile_name):
+            continue
+
         versions = loader.list_versions(profile_name)
         if not versions:
             continue
@@ -190,6 +194,98 @@ def list_available_templates() -> list[dict]:
             )
 
     return result
+
+
+def list_user_specs() -> list[dict]:
+    """List user-created specifications.
+
+    Returns:
+        List of dicts with spec info: name, display_name, versions.
+    """
+    from metaseed.specs.loader import SpecLoader
+
+    loader = SpecLoader()
+    profiles = loader.list_profiles()
+
+    result = []
+    for profile_name in profiles:
+        # Only include user-defined profiles
+        if not loader.is_user_defined(profile_name):
+            continue
+
+        versions = loader.list_versions(profile_name)
+        if not versions:
+            continue
+
+        # Get display info from latest version
+        try:
+            latest = versions[-1]
+            spec = loader.load_profile(version=latest, profile=profile_name)
+            result.append(
+                {
+                    "name": profile_name,
+                    "display_name": spec.display_name or profile_name,
+                    "description": spec.description or "",
+                    "versions": versions,
+                }
+            )
+        except Exception:
+            result.append(
+                {
+                    "name": profile_name,
+                    "display_name": profile_name,
+                    "description": "",
+                    "versions": versions,
+                }
+            )
+
+    return result
+
+
+def delete_user_spec(name: str, version: str | None = None) -> bool:
+    """Delete a user-created specification.
+
+    Args:
+        name: The profile name to delete.
+        version: Specific version to delete. If None, deletes all versions.
+
+    Returns:
+        True if deletion was successful, False otherwise.
+
+    Raises:
+        ValueError: If trying to delete a built-in spec.
+    """
+    import shutil
+
+    from metaseed.specs.loader import SpecLoader
+
+    loader = SpecLoader()
+
+    # Safety check: only allow deleting user-defined specs
+    if not loader.is_user_defined(name):
+        raise ValueError(f"Cannot delete built-in specification: {name}")
+
+    specs_dir = get_custom_specs_dir()
+    profile_dir = specs_dir / name
+
+    if not profile_dir.exists():
+        return False
+
+    if version:
+        # Delete specific version
+        version_dir = profile_dir / version
+        if version_dir.exists():
+            shutil.rmtree(version_dir)
+            # If no more versions, remove the profile directory too
+            remaining = list(profile_dir.iterdir())
+            if not remaining:
+                profile_dir.rmdir()
+            return True
+        return False
+
+    # Delete all versions
+    shutil.rmtree(profile_dir)
+    return True
 
 
 def validate_entity_name(name: str) -> str | None:

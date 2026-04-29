@@ -1,7 +1,5 @@
 <div class="field-edit-form">
-    <form hx-put="/spec-builder/entity/{{ entity_name }}/field/{{ field_idx }}"
-          hx-target="#editor-content"
-          hx-swap="innerHTML">
+    <form onsubmit="return updateField(event, '{{ entity_name }}', {{ field_idx }})">
 
         <div class="field-form-row">
             <div class="form-group">

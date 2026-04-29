@@ -9,10 +9,18 @@
     <!-- Entity metadata -->
     <div class="panel-section">
         <h4 class="panel-section-title">Details</h4>
-        <form hx-put="/spec-builder/entity/{{ entity_name }}"
-              hx-target="#editor-content"
-              hx-swap="innerHTML"
-              class="panel-form">
+        <form id="entity-details-form" onsubmit="return updateEntity(event, '{{ entity_name }}')" class="panel-form">
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text"
+                       name="name"
+                       class="form-input"
+                       value="{{ entity_name }}"
+                       pattern="[A-Z][A-Za-z0-9_]*"
+                       required
+                       placeholder="EntityName">
+                <span class="form-help">PascalCase (e.g., BiologicalMaterial)</span>
+            </div>
             <div class="form-group">
                 <label class="form-label">Description</label>
                 <textarea name="description"
@@ -122,10 +130,8 @@
     <!-- Delete entity -->
     <div class="panel-section panel-danger">
         <button class="btn btn-sm btn-danger"
-                hx-delete="/spec-builder/entity/{{ entity_name }}"
-                hx-target="body"
-                hx-swap="innerHTML"
-                hx-confirm="Delete entity '{{ entity_name }}'? This will remove all fields and relationships.">
+                onclick="deleteEntity('{{ entity_name }}')"
+                title="Delete entity '{{ entity_name }}'">
             Delete Entity
         </button>
     </div>

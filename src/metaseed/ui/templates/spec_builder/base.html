@@ -8,7 +8,7 @@
     <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=48">
+    <link rel="stylesheet" href="/static/css/style.css?v=54">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
     <div class="layout">
@@ -47,11 +47,7 @@
                 <a href="/spec-builder/export" class="btn btn-header" download>
                     Export
                 </a>
-                <button class="btn btn-header btn-save"
-                        hx-post="/spec-builder/save"
-                        hx-include="[name='name'],[name='version'],[name='display_name'],[name='description'],[name='root_entity'],[name='ontology']"
-                        hx-target="#notification-container"
-                        hx-swap="beforeend">
+                <button class="btn btn-header btn-save" onclick="saveSpec()">
                     Save
                 </button>
                 <span class="header-divider"></span>
@@ -74,30 +70,38 @@
                     </div>
                 </div>
 
-                <!-- Profile Metadata -->
+                <!-- Sidebar Tabs -->
+                <div class="sidebar-tabs">
+                    <button class="sidebar-tab active" onclick="switchSidebarTab('profile')" data-tab="profile">
+                        Profile
+                    </button>
+                    <button class="sidebar-tab" onclick="switchSidebarTab('rules')" data-tab="rules">
+                        Rules
+                        {% if spec.validation_rules %}<span class="count-badge">{{ spec.validation_rules|length }}</span>{% endif %}
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
                 <div class="sidebar-content">
-                    <div id="profile-metadata-panel"
-                         hx-get="/spec-builder/profile-metadata"
-                         hx-trigger="load"
-                         hx-swap="innerHTML">
-                        Loading...
+                    <!-- Profile Tab -->
+                    <div id="tab-profile" class="sidebar-tab-content active">
+                        <div id="profile-metadata-panel"
+                             hx-get="/spec-builder/profile-metadata"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
+                        </div>
                     </div>
 
-                    <!-- Advanced Rules -->
-                    <details class="sidebar-section">
-                        <summary class="sidebar-section-header">
-                            Advanced Rules
-                            <span class="count-badge">{{ spec.validation_rules|length }}</span>
-                        </summary>
-                        <div class="sidebar-section-body">
-                            <div id="validation-rules-panel"
-                                 hx-get="/spec-builder/validation-rules"
-                                 hx-trigger="load"
-                                 hx-swap="innerHTML">
-                                Loading...
-                            </div>
+                    <!-- Rules Tab -->
+                    <div id="tab-rules" class="sidebar-tab-content">
+                        <div id="validation-rules-panel"
+                             hx-get="/spec-builder/validation-rules"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            Loading...
                         </div>
-                    </details>
+                    </div>
                 </div>
             </aside>
 
@@ -181,10 +185,7 @@
                 <h3>Add Entity</h3>
                 <button class="btn-close" onclick="hideAddEntityModal()">&times;</button>
             </div>
-            <form hx-post="/spec-builder/entity"
-                  hx-target="#editor-content"
-                  hx-swap="innerHTML"
-                  hx-on::after-request="onEntityAdded()">
+            <form id="add-entity-form" onsubmit="return submitAddEntityForm(event)">
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="form-label">Entity Name <span class="required">*</span></label>
@@ -245,6 +246,6 @@
         let rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
-    <script src="/static/js/spec-builder.js?v=6"></script>
+    <script src="/static/js/spec-builder.js?v=23"></script>
 </body>
 </html>
