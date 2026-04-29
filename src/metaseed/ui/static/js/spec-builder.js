@@ -332,25 +332,8 @@ function closeEditorPanel() {
 // =============================================================================
 
 function refreshGraph() {
-    // Fetch updated entity data and rebuild graph
-    fetch('/spec-builder/graph-data')
-        .then(response => response.json())
-        .then(data => {
-            // Update global entities object
-            Object.keys(entities).forEach(key => delete entities[key]);
-            Object.assign(entities, data.entities);
-
-            // Update rootEntity
-            rootEntity = data.root_entity;
-
-            // Rebuild the graph
-            rebuildGraph();
-        })
-        .catch(err => {
-            // Fallback to full page reload
-            console.error('Graph refresh failed, reloading page:', err);
-            htmx.ajax('GET', '/spec-builder', { target: 'body', swap: 'innerHTML' });
-        });
+    // Full page reload to refresh graph with latest data
+    window.location.reload();
 }
 
 function rebuildGraph() {
