@@ -341,6 +341,9 @@ function refreshGraph() {
             Object.keys(entities).forEach(key => delete entities[key]);
             Object.assign(entities, data.entities);
 
+            // Update rootEntity
+            rootEntity = data.root_entity;
+
             // Rebuild the graph
             rebuildGraph();
         })

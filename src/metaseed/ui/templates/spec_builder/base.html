@@ -241,7 +241,7 @@
             }{% if not loop.last %},{% endif %}
             {% endfor %}
         };
-        const rootEntity = {{ spec.root_entity | tojson | safe }};
+        let rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
     <script src="/static/js/spec-builder.js?v=3"></script>

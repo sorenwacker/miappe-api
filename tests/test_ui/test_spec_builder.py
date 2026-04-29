@@ -213,12 +213,12 @@ class TestSpecBuilderHelpers:
         assert validate_field_name("name") is None
         assert validate_field_name("study_id123") is None
         assert validate_field_name("_private") is None
+        assert validate_field_name("field-name") is None  # hyphens allowed
 
     def test_validate_field_name_invalid(self):
         """validate_field_name returns error for invalid names."""
         assert validate_field_name("") is not None
         assert validate_field_name("UniqueId") is not None  # PascalCase
-        assert validate_field_name("field-name") is not None  # hyphen
         assert validate_field_name("123field") is not None  # starts with number
 
 

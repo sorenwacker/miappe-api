@@ -222,7 +222,7 @@ def validate_field_name(name: str) -> str | None:
     if not name:
         return "Field name is required"
     if not name[0].islower() and name[0] != "_":
-        return "Field name must start with lowercase letter (snake_case)"
-    if not name.replace("_", "").isalnum():
-        return "Field name can only contain letters, numbers, and underscores"
+        return "Field name must start with lowercase letter or underscore"
+    if not name.replace("_", "").replace("-", "").isalnum():
+        return "Field name can only contain letters, numbers, underscores, and hyphens"
     return None
