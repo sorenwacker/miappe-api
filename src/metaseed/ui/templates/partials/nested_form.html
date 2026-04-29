@@ -44,53 +44,8 @@
         <input type="hidden" name="_field_name" value="{{ field_name }}">
         <input type="hidden" name="_row_idx" value="{{ row_idx }}">
 
-        {% if required_fields %}
-        <div class="form-section">
-            <h3 class="form-section-title">Required Fields</h3>
-            {% for field in required_fields %}
-            {% set is_edit = True %}
-            {% include "partials/field.html" %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if nested_fields and inline_tables %}
-        <div class="form-section">
-            <h3 class="form-section-title">Related Entities</h3>
-            {% for field in nested_fields %}
-            {% set table_data = inline_tables.get(field.name, {}) %}
-            {% if table_data %}
-            {% include "partials/inline_table.html" with context %}
-            {% else %}
-            {% set is_edit = True %}
-            {% include "partials/field.html" %}
-            {% endif %}
-            {% endfor %}
-        </div>
-        {% elif nested_fields %}
-        <div class="form-section">
-            <h3 class="form-section-title">Related Entities</h3>
-            {% for field in nested_fields %}
-            {% set is_edit = True %}
-            {% include "partials/field.html" %}
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        {% if optional_fields %}
-        <div class="collapsible open">
-            <div class="collapsible-header" data-testid="section-optional-toggle">
-                <span class="collapsible-icon">&#9654;</span>
-                <span>Optional Fields ({{ optional_fields|length }})</span>
-            </div>
-            <div class="collapsible-content">
-                {% for field in optional_fields %}
-                {% set is_edit = True %}
-                {% include "partials/field.html" %}
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
+        {% set is_edit = True %}
+        {% include "partials/form_sections.html" %}
 
         <input type="hidden" name="_action" id="form-action" value="">
 
