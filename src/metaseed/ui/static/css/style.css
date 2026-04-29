@@ -725,11 +725,11 @@ body::before {
    ============================================ */
 .notification-container {
     position: fixed;
-    top: var(--space-lg);
+    bottom: var(--space-lg);
     right: var(--space-lg);
     z-index: 1000;
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     gap: var(--space-sm);
 }
 
@@ -764,6 +764,20 @@ body::before {
     background: var(--clr-error-bg);
     color: var(--clr-error);
     border-left-color: var(--clr-error);
+}
+
+/* Field validation error highlight */
+.field-error,
+.field-error .form-input,
+.field-error input,
+.field-error select,
+.field-error textarea {
+    border-color: var(--clr-error) !important;
+    background-color: var(--clr-error-bg) !important;
+}
+
+.field-error label {
+    color: var(--clr-error);
 }
 
 .notification-warning {
@@ -969,6 +983,38 @@ body::before {
     font-size: 0.9375rem;
     border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     color: var(--clr-error);
+}
+
+.validation-rules-summary {
+    margin-top: var(--space-md);
+    font-size: 0.875rem;
+}
+
+.validation-rules-summary summary {
+    cursor: pointer;
+    padding: var(--space-sm);
+    border-radius: var(--radius-sm);
+}
+
+.validation-rules-summary summary:hover {
+    background: var(--clr-bg-alt);
+}
+
+.validation-rules-list {
+    list-style: none;
+    padding: 0;
+    margin: var(--space-sm) 0 0 0;
+}
+
+.validation-rule-item {
+    padding: var(--space-xs) var(--space-md);
+    border-left: 2px solid var(--clr-border);
+    margin-bottom: var(--space-xs);
+    font-size: 0.8125rem;
+}
+
+.validation-rule-item strong {
+    color: var(--clr-ink);
 }
 
 /* ============================================
@@ -1970,6 +2016,8 @@ body::before {
     padding: var(--space-xl);
     cursor: pointer;
     transition: all var(--transition-med);
+    text-decoration: none;
+    color: inherit;
 }
 
 .start-option:hover {
@@ -2046,6 +2094,61 @@ body::before {
     gap: var(--space-xs);
 }
 
+/* User Specs Section */
+.user-specs-section {
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-xl);
+    border-bottom: 1px solid var(--clr-parchment);
+}
+
+.user-specs-section h2 {
+    margin-bottom: var(--space-lg);
+    font-size: 1.25rem;
+    color: var(--clr-ink);
+}
+
+.user-specs-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.user-spec-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    background: white;
+    border: 1px solid var(--clr-parchment);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast);
+}
+
+.user-spec-item:hover {
+    border-color: var(--clr-forest);
+}
+
+.user-spec-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-spec-name {
+    font-weight: 600;
+    color: var(--clr-ink);
+}
+
+.user-spec-desc {
+    font-size: 0.8125rem;
+    color: var(--clr-ink-light);
+}
+
+.user-spec-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
 /* ============================================
    ERD LAYOUT
    ============================================ */
@@ -2108,6 +2211,48 @@ body::before {
 
 .toolbox-item:active {
     cursor: grabbing;
+}
+
+/* Sidebar Tabs */
+.sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--clr-parchment);
+    background: white;
+}
+
+.sidebar-tab {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--clr-ink-light);
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.sidebar-tab:hover {
+    color: var(--clr-ink);
+    background: var(--clr-paper);
+}
+
+.sidebar-tab.active {
+    color: var(--clr-forest);
+    border-bottom-color: var(--clr-forest);
+}
+
+.sidebar-tab .count-badge {
+    margin-left: var(--space-xs);
+}
+
+.sidebar-tab-content {
+    display: none;
+}
+
+.sidebar-tab-content.active {
+    display: block;
 }
 
 .toolbox-icon {

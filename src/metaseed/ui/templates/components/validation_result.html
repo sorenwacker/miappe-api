@@ -2,6 +2,23 @@
 <div class="notification notification-success" data-testid="validation-success">
     Validation passed - all fields are valid.
 </div>
+{% if rules %}
+<details class="validation-rules-summary" data-testid="validation-rules">
+    <summary class="text-muted">{{ rules|length }} rule(s) checked</summary>
+    <ul class="validation-rules-list">
+        {% for rule in rules %}
+        <li class="validation-rule-item">
+            <strong>{{ rule.name }}</strong>
+            {% if rule.description %}<span class="text-muted">- {{ rule.description }}</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</details>
+{% endif %}
+<script>
+    // Clear any previous error highlights
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+</script>
 {% else %}
 <div class="validation-errors" data-testid="validation-errors">
     <div class="notification notification-error mb-2">
@@ -9,11 +26,57 @@
     </div>
     <ul class="validation-error-list">
         {% for error in errors %}
-        <li class="validation-error-item" data-testid="validation-error-{{ error.field }}">
+        <li class="validation-error-item" data-testid="validation-error-{{ error.field }}" data-field="{{ error.field }}">
             <strong>{{ error.field }}</strong>: {{ error.message }}
             {% if error.rule %}<span class="text-muted text-small">({{ error.rule }})</span>{% endif %}
         </li>
         {% endfor %}
     </ul>
+    {% if rules %}
+    <details class="validation-rules-summary mt-2" data-testid="validation-rules">
+        <summary class="text-muted">{{ rules|length }} rule(s) checked</summary>
+        <ul class="validation-rules-list">
+            {% for rule in rules %}
+            <li class="validation-rule-item">
+                <strong>{{ rule.name }}</strong>
+                {% if rule.description %}<span class="text-muted">- {{ rule.description }}</span>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </details>
+    {% endif %}
 </div>
+<script>
+    // Clear previous highlights
+    document.querySelectorAll('.field-error').forEach(el => el.classList.remove('field-error'));
+
+    // Highlight error fields
+    const errorFields = {{ errors | map(attribute='field') | list | tojson | safe }};
+    errorFields.forEach(fieldName => {
+        // Try different selectors to find the field
+        const selectors = [
+            `[name="${fieldName}"]`,
+            `[name="${fieldName.toLowerCase()}"]`,
+            `[data-field="${fieldName}"]`,
+            `#field-${fieldName}`,
+            `#field-${fieldName.toLowerCase()}`
+        ];
+        for (const selector of selectors) {
+            const field = document.querySelector(selector);
+            if (field) {
+                field.classList.add('field-error');
+                // Also highlight parent form-group if exists
+                const formGroup = field.closest('.form-group');
+                if (formGroup) formGroup.classList.add('field-error');
+                break;
+            }
+        }
+    });
+
+    // Scroll first error into view
+    const firstError = document.querySelector('.field-error');
+    if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+</script>
 {% endif %}

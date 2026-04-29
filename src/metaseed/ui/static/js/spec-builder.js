@@ -64,6 +64,22 @@ let hiddenEntities = new Set();
 let originalNodeColors = {};
 
 // =============================================================================
+// Sidebar Tabs
+// =============================================================================
+
+function switchSidebarTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.sidebar-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === tabName);
+    });
+
+    // Update tab content
+    document.querySelectorAll('.sidebar-tab-content').forEach(content => {
+        content.classList.toggle('active', content.id === `tab-${tabName}`);
+    });
+}
+
+// =============================================================================
 // Initialization
 // =============================================================================
 
@@ -332,8 +348,100 @@ function closeEditorPanel() {
 // =============================================================================
 
 function refreshGraph() {
-    // Full page reload to refresh graph with latest data
-    window.location.reload();
+    // Navigate to spec-builder (not /new which resets state)
+    window.location.href = '/spec-builder';
+}
+
+function deleteEntity(entityName) {
+    if (!confirm(`Delete entity '${entityName}'? This will remove all fields and relationships.`)) {
+        return;
+    }
+
+    fetch(`/spec-builder/entity/${encodeURIComponent(entityName)}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (response.ok) {
+            refreshGraph();
+        } else {
+            alert('Failed to delete entity');
+        }
+    })
+    .catch(err => {
+        console.error('Error deleting entity:', err);
+        alert('Failed to delete entity: ' + err.message);
+    });
+}
+
+function updateEntity(event, oldName) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+    const newName = formData.get('name').trim();
+    const description = formData.get('description') || '';
+    const ontologyTerm = formData.get('ontology_term') || '';
+
+    fetch(`/spec-builder/entity/${encodeURIComponent(oldName)}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `name=${encodeURIComponent(newName)}&description=${encodeURIComponent(description)}&ontology_term=${encodeURIComponent(ontologyTerm)}`
+    })
+    .then(response => {
+        if (response.ok) {
+            // If renamed, refresh page to update graph
+            if (newName !== oldName) {
+                refreshGraph();
+            } else {
+                return response.text().then(html => {
+                    const container = document.getElementById('editor-content');
+                    container.innerHTML = html;
+                    if (typeof htmx !== 'undefined') htmx.process(container);
+                });
+            }
+        } else {
+            return response.text().then(html => {
+                const container = document.getElementById('editor-content');
+                container.innerHTML = html;
+                if (typeof htmx !== 'undefined') htmx.process(container);
+            });
+        }
+    })
+    .catch(err => {
+        console.error('Error updating entity:', err);
+        alert('Failed to update entity: ' + err.message);
+    });
+
+    return false;
+}
+
+function updateField(event, entityName, fieldIdx) {
+    event.preventDefault();
+
+    const form = event.target;
+    const formData = new FormData(form);
+
+    fetch(`/spec-builder/entity/${encodeURIComponent(entityName)}/field/${fieldIdx}`, {
+        method: 'PUT',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        const container = document.getElementById('editor-content');
+        container.innerHTML = html;
+        // Re-initialize HTMX on new content
+        if (typeof htmx !== 'undefined') {
+            htmx.process(container);
+        }
+    })
+    .catch(err => {
+        console.error('Error updating field:', err);
+        alert('Failed to update field: ' + err.message);
+    });
+
+    return false;
 }
 
 function rebuildGraph() {
@@ -377,21 +485,34 @@ function rebuildGraph() {
 function autoLayout() {
     if (!network) return;
 
-    const nodeIds = nodes.getIds();
-    const cols = Math.ceil(Math.sqrt(nodeIds.length));
-
-    let sorted = [...nodeIds];
-    if (rootEntity && sorted.includes(rootEntity)) {
-        sorted = [rootEntity, ...sorted.filter(n => n !== rootEntity)];
-    }
-
-    sorted.forEach((id, idx) => {
-        const col = idx % cols;
-        const row = Math.floor(idx / cols);
-        nodes.update({ id, x: col * LAYOUT.gridSpacing, y: row * LAYOUT.gridSpacing });
+    // Re-enable physics with the original force-directed algorithm
+    network.setOptions({
+        physics: {
+            enabled: true,
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: {
+                gravitationalConstant: -100,
+                centralGravity: 0.01,
+                springLength: 150,
+                springConstant: 0.08,
+                damping: 0.4
+            },
+            stabilization: {
+                enabled: true,
+                iterations: 200,
+                updateInterval: 25
+            }
+        }
     });
 
-    setTimeout(() => network.fit({ animation: true }), 100);
+    // After stabilization, disable physics and fit view
+    network.once('stabilizationIterationsDone', () => {
+        network.setOptions({ physics: { enabled: false } });
+        network.fit({ animation: true });
+    });
+
+    // Start stabilization
+    network.stabilize();
 }
 
 function zoomIn() {
@@ -429,9 +550,79 @@ function hideAddEntityModal() {
     pendingPosition = null;
 }
 
-function onEntityAdded() {
+function onEntityAdded(event) {
+    console.log('onEntityAdded called', event);
+    if (event && event.detail && !event.detail.successful) {
+        console.error('Entity add request failed:', event.detail);
+        return;
+    }
     hideAddEntityModal();
     setTimeout(refreshGraph, 100);
+}
+
+function submitAddEntityForm(event) {
+    event.preventDefault();
+
+    const nameInput = document.getElementById('new-entity-name');
+    const name = nameInput.value.trim();
+
+    if (!name) {
+        return false;
+    }
+
+    fetch('/spec-builder/entity', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'name=' + encodeURIComponent(name)
+    })
+    .then(response => response.text())
+    .then(html => {
+        const container = document.getElementById('editor-content');
+        container.innerHTML = html;
+        if (typeof htmx !== 'undefined') htmx.process(container);
+        hideAddEntityModal();
+        setTimeout(refreshGraph, 100);
+    })
+    .catch(err => {
+        console.error('Error adding entity:', err);
+        alert('Failed to add entity: ' + err.message);
+    });
+
+    return false;
+}
+
+function saveSpec() {
+    // Gather metadata from the form
+    const formData = new FormData();
+    const fields = ['name', 'version', 'display_name', 'description', 'root_entity', 'ontology'];
+
+    fields.forEach(field => {
+        const input = document.querySelector(`[name="${field}"]`);
+        if (input) {
+            formData.append(field, input.value);
+        }
+    });
+
+    // Submit to save endpoint
+    fetch('/spec-builder/save', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(html => {
+        const container = document.getElementById('notification-container');
+        container.insertAdjacentHTML('beforeend', html);
+        // Auto-hide success notifications after 5 seconds
+        setTimeout(() => {
+            const notification = container.querySelector('.notification-success');
+            if (notification) notification.remove();
+        }, 5000);
+    })
+    .catch(err => {
+        alert('Save failed: ' + err.message);
+    });
 }
 
 function startAddRelationship() {
