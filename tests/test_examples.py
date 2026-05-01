@@ -12,7 +12,7 @@ import yaml
 from metaseed.models import get_model
 from metaseed.specs.loader import SpecLoader
 
-EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
+EXAMPLES_DIR = Path(__file__).parent.parent / "src" / "metaseed" / "examples"
 
 
 def get_all_example_files() -> list[tuple[str, str, Path]]:
