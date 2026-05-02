@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Comparison - Metaseed</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/metaseed-icon.svg">
+    <link rel="icon" type="image/png" sizes="128x128" href="/static/images/metaseed-icon-128.png">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+    <script src="/static/js/erd-common.js?v=1"></script>
+    <link rel="stylesheet" href="/static/css/style.css?v=56">
+</head>
+<body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+    <div class="layout layout-fixed">
+        <header class="header">
+            <h1 class="header-title">
+                <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
+                <span class="header-sep">/</span>
+                <span>Profile Comparison</span>
+            </h1>
+            <div class="header-actions">
+                <button class="btn btn-header" onclick="autoLayout()">Auto Layout</button>
+                <button class="btn btn-header" onclick="fitGraph()">Fit</button>
+                <span class="header-divider"></span>
+                <a href="/spec-builder" class="btn btn-header">Spec Builder</a>
+                <a href="/" class="btn btn-header">Back</a>
+            </div>
+        </header>
+
+        <div class="erd-layout">
+            <!-- Left: Sidebar -->
+            <aside class="erd-sidebar">
+                <div class="sidebar-content">
+                        <div class="form-section">
+                            <label class="form-label">Base Profile (Reference)</label>
+                            <div class="profile-selector">
+                                <select id="base-profile" class="form-select" onchange="updateVersions('base')">
+                                    <option value="">Profile</option>
+                                    {% for profile in profiles %}
+                                    <option value="{{ profile }}">{{ profile_display_names[profile] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select id="base-version" class="form-select">
+                                    <option value="">Version</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <label class="form-label">Compare Against</label>
+                            <div class="profile-selector">
+                                <select id="compare-profile" class="form-select" onchange="updateVersions('compare')">
+                                    <option value="">Profile</option>
+                                    {% for profile in profiles %}
+                                    <option value="{{ profile }}">{{ profile_display_names[profile] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select id="compare-version" class="form-select">
+                                    <option value="">Version</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <button type="button" class="btn btn-primary" onclick="runComparison()" id="compare-btn" style="width: 100%;">
+                                Compare
+                            </button>
+                        </div>
+
+                        <div id="export-section" class="form-section" style="display: none; margin-top: 16px;">
+                            <label class="form-label">Export Report</label>
+                            <div style="display: flex; gap: 6px; margin-top: 6px;">
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('markdown')">MD</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('csv')">CSV</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportReport('html')">HTML</button>
+                            </div>
+                        </div>
+
+                        <div id="filter-section" class="form-section" style="display: none; margin-top: 16px;">
+                            <label class="form-label">Show/Hide</label>
+                            <div class="filter-toggles">
+                                <label class="filter-toggle">
+                                    <input type="checkbox" id="show-base" checked onchange="applyFilters()">
+                                    <span class="filter-label" id="base-label">Base</span>
+                                </label>
+                                <label class="filter-toggle">
+                                    <input type="checkbox" id="show-compare" checked onchange="applyFilters()">
+                                    <span class="filter-label" id="compare-label">Compare</span>
+                                </label>
+                                <label class="filter-toggle">
+                                    <input type="checkbox" id="show-common" checked onchange="applyFilters()">
+                                    <span class="filter-label">Common</span>
+                                </label>
+                            </div>
+                        </div>
+                </div>
+            </aside>
+
+            <!-- Center: ERD Canvas -->
+            <main class="erd-canvas-container">
+                <div class="erd-canvas-toolbar">
+                    <span class="canvas-info" id="canvas-info">
+                        Select profiles to compare
+                    </span>
+                    <div class="canvas-controls">
+                        <button class="btn btn-sm btn-secondary" onclick="zoomIn()">+</button>
+                        <button class="btn btn-sm btn-secondary" onclick="zoomOut()">-</button>
+                        <button class="btn btn-sm btn-secondary" onclick="fitGraph()">Fit</button>
+                    </div>
+                </div>
+                <div class="erd-canvas-wrapper">
+                    <div id="erd-canvas"></div>
+                </div>
+                <div class="canvas-legend">
+                    <span class="legend-item"><span class="legend-dot unchanged"></span> Common</span>
+                    <span class="legend-item"><span class="legend-dot added"></span> Added</span>
+                    <span class="legend-item"><span class="legend-dot removed"></span> Removed</span>
+                    <span class="legend-item"><span class="legend-dot modified"></span> Modified</span>
+                    <span class="legend-item" style="margin-left: 12px;"><code>+</code> Field added</span>
+                    <span class="legend-item"><code>-</code> Field removed</span>
+                    <span class="legend-item"><code>~</code> Field modified</span>
+                    <span class="legend-item"><code>!</code> Conflict</span>
+                    <span class="legend-item"><code>*</code> Required</span>
+                </div>
+
+                <!-- Context Menu for nodes -->
+                <div id="node-context-menu" class="context-menu hidden">
+                    <div class="context-menu-header" id="ctx-node-name"></div>
+                    <button class="context-menu-item" onclick="selectEntity(contextMenuNodeId); closeContextMenu()">View Details</button>
+                    <button id="ctx-hide-btn" class="context-menu-item" onclick="hideEntity()">Hide</button>
+                    <button id="ctx-show-btn" class="context-menu-item" onclick="showEntity()">Show</button>
+                </div>
+            </main>
+
+            <!-- Right: Entity Editor Panel -->
+            <aside class="erd-editor-panel" id="editor-panel">
+                <div class="editor-panel-header">
+                    <h3 id="editor-title">Entity Details</h3>
+                    <button class="btn-close" onclick="closeEditorPanel()">&times;</button>
+                </div>
+                <div class="editor-panel-content" id="editor-content">
+                    <div class="editor-placeholder">
+                        <p>Click an entity to see differences</p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <div id="notification-container" class="notification-container"></div>
+
+    <script>
+        // =============================================================================
+        // Constants (matching spec-builder)
+        // =============================================================================
+
+        const DIFF_COLORS = {
+            unchanged: {
+                background: '#ffffff',
+                border: '#9e9e9e',
+                fontColor: '#333',
+                highlight: { background: '#f5f5f5', border: '#757575' },
+                hover: { background: '#fafafa', border: '#9e9e9e' }
+            },
+            added: {
+                background: '#e8f5e9',
+                border: '#4caf50',
+                fontColor: '#1b5e20',
+                highlight: { background: '#c8e6c9', border: '#388e3c' },
+                hover: { background: '#dcedc8', border: '#4caf50' }
+            },
+            modified: {
+                background: '#fff8e1',
+                border: '#ff9800',
+                fontColor: '#e65100',
+                highlight: { background: '#ffecb3', border: '#f57c00' },
+                hover: { background: '#fff3e0', border: '#ff9800' }
+            },
+            conflict: {
+                background: '#ffebee',
+                border: '#d32f2f',
+                fontColor: '#b71c1c',
+                highlight: { background: '#ffcdd2', border: '#c62828' },
+                hover: { background: '#ffcdd2', border: '#d32f2f' }
+            }
+        };
+
+        const FONT_CONFIG = {
+            face: 'monospace',
+            size: 12,
+            align: 'left',
+            multi: 'html'
+        };
+
+        const LAYOUT = {
+            nodeBaseHeight: 40,
+            fieldHeight: 16,
+            nodeWidth: 200
+        };
+
+        // =============================================================================
+        // State
+        // =============================================================================
+
+        let currentProfiles = [];
+        let comparisonData = null;
+        let originalGraphData = null;
+        let hiddenEntities = new Set();
+        let contextMenuNodeId = null;
+
+        // =============================================================================
+        // Profile Selection
+        // =============================================================================
+
+        // Profile versions data from server
+        const profileVersions = {{ profile_versions | tojson | safe }};
+
+        function updateVersions(selector) {
+            const profileSelect = document.getElementById(`${selector}-profile`);
+            const versionSelect = document.getElementById(`${selector}-version`);
+            const profile = profileSelect.value;
+
+            // Clear current options
+            versionSelect.innerHTML = '<option value="">Version</option>';
+
+            if (profile && profileVersions[profile]) {
+                const versions = profileVersions[profile];
+                versions.forEach(version => {
+                    const option = document.createElement('option');
+                    option.value = version;
+                    option.textContent = `v${version}`;
+                    versionSelect.appendChild(option);
+                });
+                // Default to latest version
+                if (versions.length > 0) {
+                    versionSelect.value = versions[versions.length - 1];
+                }
+            }
+        }
+
+        function getSelectedProfiles() {
+            const baseProfile = document.getElementById('base-profile').value;
+            const baseVersion = document.getElementById('base-version').value;
+            const compareProfile = document.getElementById('compare-profile').value;
+            const compareVersion = document.getElementById('compare-version').value;
+
+            if (!baseProfile || !baseVersion) {
+                return { error: 'Select base profile and version' };
+            }
+            if (!compareProfile || !compareVersion) {
+                return { error: 'Select profile and version to compare against' };
+            }
+
+            const base = `${baseProfile}/${baseVersion}`;
+            const compare = `${compareProfile}/${compareVersion}`;
+
+            if (base === compare) {
+                return { error: 'Select different profiles to compare' };
+            }
+
+            return { profiles: [base, compare] };
+        }
+
+        // =============================================================================
+        // Comparison
+        // =============================================================================
+
+        async function runComparison() {
+            const result = getSelectedProfiles();
+
+            if (result.error) {
+                showNotification(result.error, 'error');
+                return;
+            }
+
+            const profiles = result.profiles;
+            const btn = document.getElementById('compare-btn');
+            btn.disabled = true;
+            btn.textContent = 'Comparing...';
+
+            currentProfiles = profiles;
+
+            try {
+                const formData = new FormData();
+                profiles.forEach(p => formData.append('profiles', p));
+
+                const response = await fetch('/merge/compare', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showNotification(data.error, 'error');
+                    return;
+                }
+
+                comparisonData = data;
+                originalGraphData = data.graph;
+                hiddenEntities.clear();
+                initERD(data.graph);
+                document.getElementById('export-section').style.display = 'block';
+                document.getElementById('filter-section').style.display = 'block';
+                document.getElementById('canvas-info').innerHTML =
+                    `<strong>${data.statistics.total_entities}</strong> entities`;
+
+                // Update filter labels with profile names
+                const baseProfile = profiles[0].split('/')[0];
+                const compareProfile = profiles[1].split('/')[0];
+                document.getElementById('base-label').textContent = baseProfile;
+                document.getElementById('compare-label').textContent = compareProfile;
+
+                // Reset checkboxes
+                document.getElementById('show-base').checked = true;
+                document.getElementById('show-compare').checked = true;
+                document.getElementById('show-common').checked = true;
+
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Compare Selected';
+            }
+        }
+
+        // =============================================================================
+        // ERD Initialization (matching spec-builder pattern)
+        // =============================================================================
+
+        function initERD(graphData) {
+            const container = document.getElementById('erd-canvas');
+            if (!container) return;
+
+            // Wait for container to have proper size (same check as spec-builder)
+            const rect = container.getBoundingClientRect();
+            if (rect.height < 50) {
+                setTimeout(() => initERD(graphData), 200);
+                return;
+            }
+
+            const { nodeData, edgeData } = buildGraphData(graphData);
+            const network = ERD.createNetwork(container, nodeData, edgeData);
+
+            // Add click handler for entity selection
+            network.on('click', params => {
+                if (params.nodes.length > 0) {
+                    selectEntity(params.nodes[0]);
+                }
+            });
+
+            // Add right-click handler for context menu
+            network.on('oncontext', params => {
+                params.event.preventDefault();
+                const nodeId = network.getNodeAt(params.pointer.DOM);
+                if (nodeId) {
+                    showContextMenu(params.event, nodeId);
+                }
+            });
+        }
+
+        function buildGraphData(graphData) {
+            const nodeData = [];
+            const edgeData = [];
+
+            // Spread nodes in a grid pattern initially to help physics
+            const gridCols = Math.ceil(Math.sqrt(graphData.nodes.length));
+            const spacing = 300;
+
+            graphData.nodes.forEach((node, index) => {
+                const nodeConfig = buildNodeConfig(node);
+                // Set initial positions in a grid to avoid all nodes at (0,0)
+                nodeConfig.x = (index % gridCols) * spacing;
+                nodeConfig.y = Math.floor(index / gridCols) * spacing;
+                nodeData.push(nodeConfig);
+            });
+
+            graphData.edges.forEach(edge => {
+                // Use edge color from comparison (gray=common, green=added, orange=partial)
+                const edgeColor = edge.color?.color || '#666666';
+                edgeData.push({
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    arrows: { to: { enabled: true, type: 'arrow' } },
+                    color: { color: edgeColor, highlight: edgeColor },
+                    font: { size: 10, color: '#666', background: 'white' },
+                    smooth: { type: 'cubicBezier', roundness: 0.4 },
+                    width: 2,
+                    title: edge.title || ''
+                });
+            });
+
+            return { nodeData, edgeData };
+        }
+
+        function buildNodeConfig(node) {
+            const fields = node.data.fields || [];
+            const diffType = node.data.diff_type || 'unchanged';
+            const colors = DIFF_COLORS[diffType] || DIFF_COLORS.unchanged;
+
+            // Build label like spec-builder
+            const label = buildNodeLabel(node.label, fields);
+            const nodeHeight = LAYOUT.nodeBaseHeight + fields.length * LAYOUT.fieldHeight;
+
+            return {
+                id: node.id,
+                label: label,
+                shape: 'box',
+                size: Math.max(nodeHeight, LAYOUT.nodeWidth) / 2,
+                mass: 1 + fields.length * 0.3,  // Same as spec-builder
+                font: { ...FONT_CONFIG, color: colors.fontColor },
+                color: {
+                    background: colors.background,
+                    border: colors.border,
+                    highlight: colors.highlight,
+                    hover: colors.hover
+                },
+                borderWidth: diffType === 'conflict' ? 3 : 2,
+                margin: 15,  // Same as spec-builder
+                shadow: true,
+                data: node.data
+            };
+        }
+
+        function buildNodeLabel(name, fields) {
+            let label = `<b>${name}</b>\n`;
+            label += '────────────────';
+
+            if (fields.length === 0) {
+                label += '\n<i>(no fields)</i>';
+                return label;
+            }
+
+            fields.forEach(field => {
+                const req = field.required ? '*' : ' ';
+                const fk = (field.type === 'entity' || field.type === 'list') && field.items ? '→' : ' ';
+
+                // Diff indicator: + added, - removed, ~ modified, ! conflict, (space) unchanged
+                let ind = ' ';
+                if (field.diff_type === 'conflict') ind = '!';
+                else if (field.diff_type === 'added') ind = '+';
+                else if (field.diff_type === 'removed') ind = '-';
+                else if (field.diff_type === 'modified') ind = '~';
+
+                label += `\n${ind}${req}${fk} ${field.name}: ${field.type}`;
+            });
+
+            return label;
+        }
+
+        // =============================================================================
+        // Entity Selection / Editor Panel
+        // =============================================================================
+
+        function selectEntity(nodeId) {
+            const node = ERD.getNodes().get(nodeId);
+            if (!node) return;
+
+            document.getElementById('editor-title').textContent = node.data.name;
+
+            const fields = node.data.fields || [];
+            let html = `
+                <div class="form-section">
+                    <label class="form-label">Status</label>
+                    <span class="diff-badge ${node.data.diff_type}">${node.data.diff_type}</span>
+                </div>
+                <div class="form-section">
+                    <label class="form-label">Present In</label>
+                    <div class="profile-tags">
+                        ${Object.entries(node.data.profiles || {})
+                            .filter(([_, present]) => present)
+                            .map(([p, _]) => `<span class="profile-tag">${p}</span>`)
+                            .join('')}
+                    </div>
+                </div>
+            `;
+
+            if (fields.length > 0) {
+                html += `<div class="form-section">
+                    <label class="form-label">Fields (${fields.length})</label>
+                    <div class="field-diff-list">`;
+
+                fields.forEach(field => {
+                    html += `
+                        <div class="field-diff-item ${field.diff_type}">
+                            <div class="field-diff-header">
+                                <span>${field.required ? '*' : ''}${field.name}</span>
+                                <code>${field.type}</code>
+                            </div>
+                            <div class="field-diff-profiles">
+                                ${field.profiles.map(p => `<span class="profile-tag sm">${p.split('/')[0]}</span>`).join('')}
+                            </div>
+                            ${field.attributes_changed?.length ?
+                                `<div class="field-diff-changes">Changed: ${field.attributes_changed.join(', ')}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                html += '</div></div>';
+            }
+
+            document.getElementById('editor-content').innerHTML = html;
+            document.getElementById('editor-panel').classList.add('open');
+        }
+
+        function closeEditorPanel() {
+            document.getElementById('editor-panel').classList.remove('open');
+        }
+
+        // =============================================================================
+        // Export (graph controls provided by erd-common.js)
+        // =============================================================================
+
+        function exportReport(format) {
+            if (currentProfiles.length < 2) return;
+            window.open(`/merge/report/${format}/${currentProfiles.join(',')}`, '_blank');
+        }
+
+        // =============================================================================
+        // Filtering
+        // =============================================================================
+
+        function applyFilters() {
+            if (!originalGraphData || currentProfiles.length < 2) return;
+
+            const showBase = document.getElementById('show-base').checked;
+            const showCompare = document.getElementById('show-compare').checked;
+            const showCommon = document.getElementById('show-common').checked;
+
+            const baseProfile = currentProfiles[0];
+            const compareProfile = currentProfiles[1];
+
+            // Filter nodes based on diff_type
+            const filteredNodes = originalGraphData.nodes.filter(node => {
+                const diffType = node.data.diff_type;
+                const inBase = node.data.profiles[baseProfile];
+                const inCompare = node.data.profiles[compareProfile];
+
+                // Common entities (in both)
+                if (inBase && inCompare) {
+                    return showCommon;
+                }
+                // Only in base (removed)
+                if (inBase && !inCompare) {
+                    return showBase;
+                }
+                // Only in compare (added)
+                if (!inBase && inCompare) {
+                    return showCompare;
+                }
+                return true;
+            });
+
+            // Get IDs of visible nodes
+            const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
+
+            // Filter edges - only show if both endpoints are visible
+            // and edge matches filter criteria
+            const filteredEdges = originalGraphData.edges.filter(edge => {
+                // Both endpoints must be visible
+                if (!visibleNodeIds.has(edge.from) || !visibleNodeIds.has(edge.to)) {
+                    return false;
+                }
+
+                const color = edge.color?.color;
+                // Gray = common (#666666)
+                if (color === '#666666') return showCommon;
+                // Green = added (#4caf50)
+                if (color === '#4caf50') return showCompare;
+                // Red = removed (#f44336)
+                if (color === '#f44336') return showBase;
+
+                return true;
+            });
+
+            // Rebuild the graph with filtered data
+            const filteredGraph = {
+                nodes: filteredNodes,
+                edges: filteredEdges
+            };
+
+            initERD(filteredGraph);
+
+            // Update canvas info
+            document.getElementById('canvas-info').innerHTML =
+                `<strong>${filteredNodes.length}</strong> of ${originalGraphData.nodes.length} entities`;
+        }
+
+        // =============================================================================
+        // Context Menu (Hide/Show Entities)
+        // =============================================================================
+
+        function showContextMenu(event, nodeId) {
+            const menu = document.getElementById('node-context-menu');
+            const node = ERD.getNodes().get(nodeId);
+            const isHidden = hiddenEntities.has(nodeId);
+
+            contextMenuNodeId = nodeId;
+            document.getElementById('ctx-node-name').textContent = node?.data?.name || nodeId;
+            document.getElementById('ctx-hide-btn').style.display = isHidden ? 'none' : 'block';
+            document.getElementById('ctx-show-btn').style.display = isHidden ? 'block' : 'none';
+
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            menu.classList.remove('hidden');
+
+            setTimeout(() => {
+                document.addEventListener('click', closeContextMenu, { once: true });
+            }, 0);
+        }
+
+        function closeContextMenu() {
+            document.getElementById('node-context-menu').classList.add('hidden');
+            contextMenuNodeId = null;
+        }
+
+        function hideEntity() {
+            if (!contextMenuNodeId) return;
+            const nodeId = contextMenuNodeId;
+            hiddenEntities.add(nodeId);
+
+            // Dim the node
+            ERD.getNodes().update({
+                id: nodeId,
+                color: {
+                    background: '#f5f5f5',
+                    border: '#bdbdbd',
+                    highlight: { background: '#eeeeee', border: '#9e9e9e' },
+                    hover: { background: '#eeeeee', border: '#bdbdbd' }
+                },
+                font: { ...FONT_CONFIG, color: '#9e9e9e' },
+                opacity: 0.4
+            });
+
+            // Hide connected edges
+            const edges = ERD.getEdges();
+            const connectedEdges = edges.get().filter(e => e.from === nodeId || e.to === nodeId);
+            connectedEdges.forEach(edge => {
+                edges.update({ id: edge.id, hidden: true });
+            });
+
+            closeContextMenu();
+        }
+
+        function showEntity() {
+            if (!contextMenuNodeId) return;
+            const nodeId = contextMenuNodeId;
+            hiddenEntities.delete(nodeId);
+
+            // Restore node from original graph data
+            const originalNode = originalGraphData?.nodes.find(n => n.id === nodeId);
+            if (originalNode) {
+                const nodeConfig = buildNodeConfig(originalNode);
+                nodeConfig.opacity = 1;
+                ERD.getNodes().update(nodeConfig);
+            }
+
+            // Show connected edges (if other endpoint is visible)
+            const edges = ERD.getEdges();
+            const connectedEdges = edges.get().filter(e => e.from === nodeId || e.to === nodeId);
+            connectedEdges.forEach(edge => {
+                const otherNode = edge.from === nodeId ? edge.to : edge.from;
+                if (!hiddenEntities.has(otherNode)) {
+                    edges.update({ id: edge.id, hidden: false });
+                }
+            });
+
+            closeContextMenu();
+        }
+
+        // =============================================================================
+        // Notifications
+        // =============================================================================
+
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            const el = document.createElement('div');
+            el.className = `notification notification-${type}`;
+            el.innerHTML = `<span>${message}</span><button class="notification-close" onclick="this.parentElement.remove()">&times;</button>`;
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 5000);
+        }
+    </script>
+
+</body>
+</html>

@@ -25,9 +25,6 @@ theme:
 
 plugins:
   - search
-  - panzoom:
-      full_screen: true
-      key: ctrl
 
 markdown_extensions:
   - admonition
@@ -51,8 +48,10 @@ nav:
       - Quick Start: getting-started/quickstart.md
   - Guides:
       - Spec Builder: guides/spec-builder.md
+      - Profile Comparison: guides/spec-merge.md
   - Profiles:
       - ISA: profiles/isa.md
+      - JERM: profiles/jerm.md
       - MIAPPE: profiles/miappe.md
       - Combined: profiles/combined.md
   - Discussion:

@@ -236,62 +236,12 @@ function createEdge(from, to, label, type) {
 }
 
 /**
- * Create the vis-network instance.
+ * Create the vis-network instance using shared ERD module.
  */
 function createNetwork(container, nodeData, edgeData) {
-    nodes = new vis.DataSet(nodeData);
-    edges = new vis.DataSet(edgeData);
-
-    const options = {
-        layout: {
-            improvedLayout: true,
-            randomSeed: 42
-        },
-        physics: {
-            enabled: true,
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: {
-                gravitationalConstant: -100,
-                centralGravity: 0.01,
-                springLength: 200,
-                springConstant: 0.08,
-                damping: 0.5,
-                avoidOverlap: 1
-            },
-            maxVelocity: 50,
-            minVelocity: 0.1,
-            stabilization: {
-                enabled: true,
-                iterations: 2000,
-                updateInterval: 25
-            }
-        },
-        interaction: {
-            hover: true,
-            zoomView: true,
-            zoomSpeed: 0.5,
-            dragView: true,
-            dragNodes: true,
-            navigationButtons: false,
-            keyboard: {
-                enabled: false  // Disabled to prevent capturing - and _ keys in input fields
-            }
-        },
-        nodes: {
-            shape: 'box',
-            margin: 12,
-            widthConstraint: { minimum: 180 }
-        },
-        edges: {
-            smooth: {
-                type: 'cubicBezier',
-                forceDirection: 'vertical',
-                roundness: 0.4
-            }
-        }
-    };
-
-    network = new vis.Network(container, { nodes, edges }, options);
+    network = ERD.createNetwork(container, nodeData, edgeData);
+    nodes = ERD.getNodes();
+    edges = ERD.getEdges();
 }
 
 /**
@@ -310,9 +260,7 @@ function attachNetworkEventHandlers() {
         }
     });
 
-    network.once('stabilizationIterationsDone', () => {
-        network.setOptions({ physics: { enabled: false } });
-    });
+    // Note: stabilizationIterationsDone is handled by ERD.createNetwork()
 
     network.on('oncontext', function(params) {
         params.event.preventDefault();
@@ -482,58 +430,7 @@ function rebuildGraph() {
     }
 }
 
-function autoLayout() {
-    if (!network) return;
-
-    // Re-enable physics with the original force-directed algorithm
-    network.setOptions({
-        physics: {
-            enabled: true,
-            solver: 'forceAtlas2Based',
-            forceAtlas2Based: {
-                gravitationalConstant: -100,
-                centralGravity: 0.01,
-                springLength: 150,
-                springConstant: 0.08,
-                damping: 0.4
-            },
-            stabilization: {
-                enabled: true,
-                iterations: 200,
-                updateInterval: 25
-            }
-        }
-    });
-
-    // After stabilization, disable physics and fit view
-    network.once('stabilizationIterationsDone', () => {
-        network.setOptions({ physics: { enabled: false } });
-        network.fit({ animation: true });
-    });
-
-    // Start stabilization
-    network.stabilize();
-}
-
-function zoomIn() {
-    if (network) {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale * 1.15, animation: { duration: 200 } });
-    }
-}
-
-function zoomOut() {
-    if (network) {
-        const scale = network.getScale();
-        network.moveTo({ scale: scale / 1.15, animation: { duration: 200 } });
-    }
-}
-
-function fitGraph() {
-    if (network) {
-        network.fit({ animation: { duration: 300 } });
-    }
-}
+// Graph control functions (autoLayout, zoomIn, zoomOut, fitGraph) provided by erd-common.js
 
 // =============================================================================
 // Add Entity Modal

@@ -1,0 +1,182 @@
+"""Routes for profile comparison and merge functionality."""
+
+from collections.abc import Callable
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+
+from metaseed.specs.loader import SpecLoader
+from metaseed.specs.merge import (
+    CSVReportGenerator,
+    DiffVisualizer,
+    HTMLReportGenerator,
+    MarkdownReportGenerator,
+    compare,
+)
+from metaseed.ui.state import AppState
+
+
+def register_merge_routes(
+    app: FastAPI,
+    templates: Jinja2Templates,
+    _get_state: Callable[[], AppState],
+) -> None:
+    """Register merge-related routes.
+
+    Args:
+        app: FastAPI application instance.
+        templates: Jinja2 templates instance.
+        _get_state: Function to get app state (unused, kept for API consistency).
+    """
+
+    @app.get("/merge/", response_class=HTMLResponse)
+    async def merge_page(request: Request) -> HTMLResponse:
+        """Render the merge comparison page."""
+        loader = SpecLoader()
+        profiles = loader.list_profiles()
+
+        # Get versions and display names for each profile
+        profile_versions = {}
+        profile_display_names = {}
+        for profile in profiles:
+            versions = loader.list_versions(profile=profile)
+            profile_versions[profile] = versions
+            # Load the latest version to get display name
+            if versions:
+                spec = loader.load_profile(version=versions[-1], profile=profile)
+                profile_display_names[profile] = spec.display_name or profile
+
+        return templates.TemplateResponse(
+            request,
+            "merge/index.html",
+            {
+                "profiles": profiles,
+                "profile_versions": profile_versions,
+                "profile_display_names": profile_display_names,
+            },
+        )
+
+    @app.post("/merge/compare")
+    async def compare_profiles(request: Request) -> JSONResponse:
+        """Compare selected profiles and return results."""
+        form = await request.form()
+        profile_specs = form.getlist("profiles")
+
+        if len(profile_specs) < 2:
+            return JSONResponse(
+                {"error": "Select at least 2 profiles to compare"},
+                status_code=400,
+            )
+
+        # Parse profile specs
+        profile_tuples = []
+        for spec in profile_specs:
+            if "/" in spec:
+                parts = spec.split("/", 1)
+                profile_tuples.append((parts[0], parts[1]))
+
+        try:
+            result = compare(profile_tuples)
+
+            # Generate visualization data
+            visualizer = DiffVisualizer()
+            graph_data = visualizer.build_diff_graph(result)
+
+            # Generate report
+            report = MarkdownReportGenerator(result).generate()
+
+            return JSONResponse(
+                {
+                    "success": True,
+                    "graph": graph_data,
+                    "report": report,
+                    "statistics": {
+                        "profiles": result.profiles,
+                        "total_entities": result.statistics.total_entities,
+                        "common_entities": result.statistics.common_entities,
+                        "unique_entities": result.statistics.unique_entities,
+                        "modified_entities": result.statistics.modified_entities,
+                        "total_fields": result.statistics.total_fields,
+                        "common_fields": result.statistics.common_fields,
+                        "conflicting_fields": result.statistics.conflicting_fields,
+                    },
+                }
+            )
+
+        except Exception as e:
+            return JSONResponse(
+                {"error": str(e)},
+                status_code=500,
+            )
+
+    @app.get("/merge/graph/{profiles:path}")
+    async def get_diff_graph(profiles: str) -> JSONResponse:
+        """Get diff visualization data for profiles.
+
+        Args:
+            profiles: Comma-separated profile specs (e.g., "miappe/1.1,isa/1.0").
+        """
+        profile_specs = profiles.split(",")
+
+        if len(profile_specs) < 2:
+            return JSONResponse(
+                {"error": "At least 2 profiles required"},
+                status_code=400,
+            )
+
+        profile_tuples = []
+        for spec in profile_specs:
+            if "/" in spec:
+                parts = spec.split("/", 1)
+                profile_tuples.append((parts[0], parts[1]))
+
+        try:
+            result = compare(profile_tuples)
+            visualizer = DiffVisualizer()
+            graph_data = visualizer.build_diff_graph(result)
+
+            return JSONResponse(graph_data)
+
+        except Exception as e:
+            return JSONResponse(
+                {"error": str(e)},
+                status_code=500,
+            )
+
+    @app.get("/merge/report/{format_type}/{profiles:path}")
+    async def get_report(format_type: str, profiles: str) -> HTMLResponse:
+        """Get comparison report in specified format.
+
+        Args:
+            format_type: Report format (markdown, csv, html).
+            profiles: Comma-separated profile specs.
+        """
+        profile_specs = profiles.split(",")
+
+        profile_tuples = []
+        for spec in profile_specs:
+            if "/" in spec:
+                parts = spec.split("/", 1)
+                profile_tuples.append((parts[0], parts[1]))
+
+        try:
+            result = compare(profile_tuples)
+
+            if format_type == "csv":
+                content = CSVReportGenerator(result).generate()
+                media_type = "text/csv"
+            elif format_type == "html":
+                content = HTMLReportGenerator(result).generate()
+                media_type = "text/html"
+            else:
+                content = MarkdownReportGenerator(result).generate()
+                media_type = "text/markdown"
+
+            return HTMLResponse(content=content, media_type=media_type)
+
+        except Exception as e:
+            return HTMLResponse(
+                content=f"Error: {e}",
+                status_code=500,
+            )

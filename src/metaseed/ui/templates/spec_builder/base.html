@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/static/css/style.css?v=54">
 </head>
 <body hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
-    <div class="layout">
+    <div class="layout layout-fixed">
         <header class="header">
             <h1 class="header-title">
                 <a href="/" style="color: inherit; text-decoration: none;"><img src="/static/images/metaseed-logo-light.svg" alt="Metaseed" class="header-logo"></a>
@@ -55,6 +55,7 @@
                    onclick="return confirm('Start over? Any unsaved changes will be lost.')">
                     Start Over
                 </a>
+                <a href="/merge/" class="btn btn-header">Compare</a>
                 <a href="/" class="btn btn-header">Back</a>
             </div>
         </header>
@@ -246,6 +247,7 @@
         let rootEntity = {{ spec.root_entity | tojson | safe }};
         const fieldTypes = {{ field_types | tojson | safe }};
     </script>
-    <script src="/static/js/spec-builder.js?v=23"></script>
+    <script src="/static/js/erd-common.js?v=1"></script>
+    <script src="/static/js/spec-builder.js?v=24"></script>
 </body>
 </html>
